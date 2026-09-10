@@ -2,16 +2,7 @@
 	email {$CADDY_EMAIL}
 }
 
-http:// {
-	encode gzip
-	reverse_proxy api:8080 {
-		header_up Authorization {http.request.header.Authorization}
-		header_up Content-Type {http.request.header.Content-Type}
-		header_up Accept {http.request.header.Accept}
-	}
-}
-
-{$SITE_ADDRESS} {
+ttwatcher.com {
 	encode gzip
 	reverse_proxy api:8080 {
 		header_up Authorization {http.request.header.Authorization}

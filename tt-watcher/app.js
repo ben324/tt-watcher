@@ -90,11 +90,8 @@ async function loadWatches() {
   } catch (err) { if ($("list-error")) $("list-error").textContent = err.message; }
 }
 async function loadOptions() {
-  const sel = $("s-type"); if (!sel) return; sel.innerHTML = "";
-  try {
-    const data = await api("/api/options");
-    (data.eventTypes || []).forEach((t) => { const opt = document.createElement("option"); opt.value = t.id; opt.textContent = t.label; sel.appendChild(opt); });
-  } catch (_) { sel.innerHTML = '<option value="ALL">Any type</option>'; }
+  const sel = $("s-type");
+  if (!sel || sel.options.length > 1) return;
 }
 async function bootDesk() { await loadOptions(); await loadWatches(); }
 async function start() {

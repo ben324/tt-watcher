@@ -15,12 +15,9 @@ cd "$APP_DIR"
 git pull --ff-only || true
 if [ ! -f .env ]; then
   cat > .env <<'EOF'
-SITE_ADDRESS=http://localhost
-CADDY_EMAIL=you@example.com
+SITE_ADDRESS=ttwatcher.com
+CADDY_EMAIL=you@ttwatcher.com
 INTERNAL_API_KEY=dev-internal
-GEOAPIFY_API_KEY=87ad304e5f5a4e04a07fdada78297a92
 EOF
-  echo "Edit $APP_DIR/.env then: cd $APP_DIR && docker compose up --build -d"
-else
-  docker compose up --build -d
 fi
+bash "$APP_DIR/start-live.sh"

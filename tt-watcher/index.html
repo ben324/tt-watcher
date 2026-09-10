@@ -32,7 +32,7 @@
         <div class="grid">
           <form id="search-form" class="panel" action="#" method="post" onsubmit="return false;">
             <h2>New listings</h2>
-            <p class="lede">Type an address and click Find address, then Watch this search.</p>
+            <p class="lede">Type an address or use your location, then Watch this search.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
             <div class="row">
               <button type="button" id="geocode" class="ghost">Find address</button>
@@ -69,108 +69,165 @@
   <script>
     (function () {
       var KEY = "87ad304e5f5a4e04a07fdada78297a92";
-      var tokenKey = "tt-watcher-token";
+      var TOKEN_KEY = "tt-watcher-token";
       var registerMode = false;
       var status = document.getElementById("api-status");
-      var err = document.getElementById("auth-error");
       var submit = document.getElementById("auth-submit");
-      window.__ttAuthBound = true;
-      function token() { return localStorage.getItem(tokenKey) || ""; }
-      function setErr(id, msg) { var el = document.getElementById(id); if (el) el.textContent = msg || ""; }
-      function doLogin() {
-        if (err) err.textContent = "";
-        var email = ((document.getElementById("auth-email") || {}).value || "").trim();
-        var password = (document.getElementById("auth-password") || {}).value || "";
-        if (!email || !password) { if (err) err.textContent = "Email and password are required"; return; }
-        if (registerMode && password.length < 8) { if (err) err.textContent = "Password must be at least 8 characters"; return; }
-        if (submit) submit.disabled = true;
-        fetch(registerMode ? "/api/auth/register" : "/api/auth/login", {
-          method: "POST", headers: { "Content-Type": "application/json", "Accept": "application/json" },
-          body: JSON.stringify({ email: email, password: password })
-        }).then(function (res) {
-          return res.text().then(function (text) {
-            var data = {}; try { data = text ? JSON.parse(text) : {}; } catch (e2) { data = { message: text }; }
-            if (!res.ok) throw new Error(data.message || data.error || res.statusText);
-            return data;
-          });
-        }).then(function (data) {
-          if (!data.token) throw new Error("Login did not return a session");
-          localStorage.setItem(tokenKey, data.token);
-          if (typeof window.afterLogin === "function") window.afterLogin(data.user);
-          else { document.getElementById("auth").classList.add("hidden"); document.getElementById("desk").classList.remove("hidden"); }
-        }).catch(function (e3) { if (err) err.textContent = e3.message || String(e3); })
-        .then(function () { if (submit) submit.disabled = false; });
+      function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
+      function $(id) { return document.getElementById(id); }
+      function setText(id, msg) { var el = $(id); if (el) el.textContent = msg || ""; }
+      function escapeHtml(s) {
+        return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
-      fetch("/api/health").then(function (r) {
-        if (status) status.textContent = r.ok ? "API is up at " + location.origin : "API returned " + r.status;
-      }).catch(function () {
-        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
-      });
-      var tabLogin = document.getElementById("tab-login"); var tabRegister = document.getElementById("tab-register");
-      if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
-      if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
-      if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
-      function postWatch(body, errId) {
-        if (!token()) { setErr(errId, "Log in first"); return; }
-        setErr(errId, "Saving…");
-        fetch("/api/watches", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Accept": "application/json", "Authorization": "Bearer " + token() },
-          body: JSON.stringify(body)
-        }).then(function (res) {
+      function api(path, opts) {
+        opts = opts || {};
+        var headers = { "Accept": "application/json" };
+        if (opts.body) headers["Content-Type"] = "application/json";
+        if (token()) headers.Authorization = "Bearer " + token();
+        return fetch(path, { method: opts.method || "GET", headers: headers, body: opts.body || undefined }).then(function (res) {
           return res.text().then(function (text) {
             var data = {}; try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { message: text }; }
             if (!res.ok) throw new Error(data.message || data.error || ("HTTP " + res.status));
             return data;
           });
-        }).then(function () {
-          setErr(errId, "");
-          if (typeof loadWatches === "function") loadWatches();
-          else setErr(errId, "Saved");
-        }).catch(function (e) { setErr(errId, e.message || String(e)); });
+        });
       }
-      var searchSave = document.getElementById("search-save");
-      if (searchSave) searchSave.onclick = function (e) {
+      function pin(lat, lng, label) {
+        if ($("s-lat")) $("s-lat").value = Number(lat).toFixed(5);
+        if ($("s-lng")) $("s-lng").value = Number(lng).toFixed(5);
+        if (label && $("s-address")) $("s-address").value = label;
+        if ($("s-coords")) $("s-coords").textContent = (label || "Location saved") + "  ·  " + (($("s-radius") || {}).value || "25") + " mi";
+      }
+      function loadOptions() {
+        var sel = $("s-type"); if (!sel) return;
+        api("/api/options").then(function (data) {
+          sel.innerHTML = "";
+          (data.eventTypes || []).forEach(function (t) {
+            var opt = document.createElement("option"); opt.value = t.id; opt.textContent = t.label; sel.appendChild(opt);
+          });
+        }).catch(function (e) { setText("search-error", "Could not load event types: " + e.message); });
+      }
+      function loadWatches() {
+        var box = $("watches"); if (!box) return;
+        setText("list-error", "");
+        api("/api/watches").then(function (data) {
+          var watches = data.watches || [];
+          if (!watches.length) { box.innerHTML = "<li class='meta'>No watches yet.</li>"; return; }
+          box.innerHTML = watches.map(function (w) {
+            var detail = w.kind === "EVENT" ? ("event " + (w.eventId || "")) : ((w.radiusMiles || "") + "mi · " + (w.eventType || "ALL"));
+            var dates = [w.startDateAfter, w.startDateBefore].filter(Boolean).join(" → ");
+            return "<li><div><span class='badge'>" + escapeHtml(w.kind) + "</span><strong>" + escapeHtml(w.name || w.kind) + "</strong><p class='meta'>" + escapeHtml(detail) + (dates ? " · " + escapeHtml(dates) : "") + "</p></div><button type='button' class='ghost danger' data-del='" + escapeHtml(w.id) + "'>Remove</button></li>";
+          }).join("");
+          box.querySelectorAll("[data-del]").forEach(function (btn) {
+            btn.onclick = function () { api("/api/watches/" + btn.getAttribute("data-del"), { method: "DELETE" }).then(loadWatches).catch(function (e) { setText("list-error", e.message); }); };
+          });
+        }).catch(function (e) { setText("list-error", e.message); });
+      }
+      window.loadWatches = loadWatches;
+      function showDesk(user) {
+        $("auth").classList.add("hidden"); $("desk").classList.remove("hidden"); $("who").classList.remove("hidden");
+        $("who").innerHTML = (user && user.email ? user.email : "signed in") + ' <button type="button" class="ghost" id="logout">Log out</button>';
+        var out = $("logout");
+        if (out) out.onclick = function () {
+          api("/api/auth/logout", { method: "POST" }).catch(function () {});
+          localStorage.removeItem(TOKEN_KEY);
+          $("auth").classList.remove("hidden"); $("desk").classList.add("hidden"); $("who").classList.add("hidden"); $("who").innerHTML = "";
+        };
+        loadOptions(); loadWatches();
+      }
+      window.afterLogin = function (user) { showDesk(user); };
+      function doLogin() {
+        setText("auth-error", "");
+        var email = (($("auth-email") || {}).value || "").trim();
+        var password = ($("auth-password") || {}).value || "";
+        if (!email || !password) { setText("auth-error", "Email and password are required"); return; }
+        if (registerMode && password.length < 8) { setText("auth-error", "Password must be at least 8 characters"); return; }
+        if (submit) submit.disabled = true;
+        api(registerMode ? "/api/auth/register" : "/api/auth/login", { method: "POST", body: JSON.stringify({ email: email, password: password }) })
+          .then(function (data) {
+            if (!data.token) throw new Error("Login did not return a session");
+            localStorage.setItem(TOKEN_KEY, data.token);
+            showDesk(data.user);
+          }).catch(function (e) { setText("auth-error", e.message); })
+          .then(function () { if (submit) submit.disabled = false; });
+      }
+      fetch("/api/health").then(function (r) {
+        if (status) status.textContent = r.ok ? ("API is up at " + location.origin) : ("API returned " + r.status);
+      }).catch(function () {
+        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
+      });
+      var tabLogin = $("tab-login"), tabRegister = $("tab-register");
+      if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
+      if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
+      if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
+      var radius = $("s-radius"), radiusVal = $("s-radius-val");
+      function syncMiles() { if (radius && radiusVal) radiusVal.textContent = radius.value; }
+      if (radius) { radius.oninput = syncMiles; radius.onchange = syncMiles; radius.addEventListener("input", syncMiles); syncMiles(); }
+      if ($("geocode")) $("geocode").onclick = function (e) {
         if (e) e.preventDefault();
-        var latEl = document.getElementById("s-lat"); var lngEl = document.getElementById("s-lng");
-        var lat = Number(latEl && latEl.value); var lng = Number(lngEl && lngEl.value);
-        if (!latEl || !lngEl || !latEl.value || !lngEl.value || !Number.isFinite(lat) || !Number.isFinite(lng)) {
-          setErr("search-error", "Find an address first, then Watch this search"); return;
-        }
-        var typeEl = document.getElementById("s-type");
-        var miles = Number((document.getElementById("s-radius") || {}).value || 25);
-        var eventType = (typeEl && typeEl.value) || "ALL";
-        var body = { kind: "SEARCH", name: eventType + " " + miles + "mi", latitude: lat, longitude: lng, radiusMiles: miles, eventType: eventType };
-        var from = (document.getElementById("s-from") || {}).value; var to = (document.getElementById("s-to") || {}).value;
-        if (from) body.startDateAfter = from; if (to) body.startDateBefore = to;
-        postWatch(body, "search-error");
-      };
-      var eventSave = document.getElementById("event-save");
-      if (eventSave) eventSave.onclick = function (e) {
-        if (e) e.preventDefault();
-        var eventId = ((document.getElementById("e-id") || {}).value || "").trim();
-        if (!eventId) { setErr("event-error", "Event id is required"); return; }
-        postWatch({ kind: "EVENT", eventId: eventId, name: eventId }, "event-error");
-      };
-      var geoBtn = document.getElementById("geocode");
-      if (geoBtn) geoBtn.onclick = function (e) {
-        if (e) e.preventDefault();
-        var q = ((document.getElementById("s-address") || {}).value || "").trim();
-        if (!q) { setErr("search-error", "Type an address first"); return; }
-        setErr("search-error", "Looking up…");
+        var q = (($("s-address") || {}).value || "").trim();
+        if (!q) { setText("search-error", "Type an address first"); return; }
+        setText("search-error", "Looking up…");
         fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
           .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || "Geoapify HTTP " + r.status); return d; }); })
           .then(function (d) {
             var hit = d.results && d.results[0];
             if (!hit) throw new Error("No match for that address");
-            var la = document.getElementById("s-lat"); var lo = document.getElementById("s-lng"); var coords = document.getElementById("s-coords"); var addr = document.getElementById("s-address");
-            if (la) la.value = Number(hit.lat).toFixed(5); if (lo) lo.value = Number(hit.lon).toFixed(5);
-            if (addr && hit.formatted) addr.value = hit.formatted;
-            if (coords) coords.textContent = hit.formatted || "Location saved";
-            setErr("search-error", "");
-          })
-          .catch(function (e2) { setErr("search-error", e2.message || String(e2)); });
+            pin(Number(hit.lat), Number(hit.lon), hit.formatted || q);
+            setText("search-error", "");
+          }).catch(function (e2) { setText("search-error", e2.message || String(e2)); });
       };
+      if ($("geo")) $("geo").onclick = function (e) {
+        if (e) e.preventDefault();
+        if (!window.isSecureContext) { setText("search-error", "Location needs http://127.0.0.1:8080/ (not a file:// page)"); return; }
+        if (!navigator.geolocation) { setText("search-error", "This browser has no location API"); return; }
+        setText("search-error", "Reading location… allow it if the browser asks");
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          pin(pos.coords.latitude, pos.coords.longitude, "Current location");
+          setText("search-error", "");
+          fetch("https://api.geoapify.com/v1/geocode/reverse?format=json&lat=" + pos.coords.latitude + "&lon=" + pos.coords.longitude + "&apiKey=" + encodeURIComponent(KEY))
+            .then(function (r) { return r.json(); })
+            .then(function (d) { var hit = d.results && d.results[0]; if (hit && hit.formatted) pin(pos.coords.latitude, pos.coords.longitude, hit.formatted); })
+            .catch(function () {});
+        }, function (e3) {
+          var msg = "Location permission denied";
+          if (e3 && e3.code === 1) msg = "Location permission denied — allow it for this site";
+          else if (e3 && e3.code === 2) msg = "Location unavailable";
+          else if (e3 && e3.code === 3) msg = "Location timed out";
+          else if (e3 && e3.message) msg = e3.message;
+          setText("search-error", msg);
+        }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
+      };
+      function postWatch(body, errId) {
+        if (!token()) { setText(errId, "Log in first"); return; }
+        setText(errId, "Saving…");
+        api("/api/watches", { method: "POST", body: JSON.stringify(body) })
+          .then(function () { setText(errId, ""); loadWatches(); })
+          .catch(function (e) { setText(errId, e.message); });
+      }
+      if ($("search-save")) $("search-save").onclick = function (e) {
+        if (e) e.preventDefault();
+        var latEl = $("s-lat"), lngEl = $("s-lng");
+        var lat = Number(latEl && latEl.value), lng = Number(lngEl && lngEl.value);
+        if (!latEl || !lngEl || !latEl.value || !lngEl.value || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+          setText("search-error", "Find an address or use your location first"); return;
+        }
+        var miles = Number((radius && radius.value) || 25);
+        var eventType = ($("s-type") && $("s-type").value) || "ALL";
+        var body = { kind: "SEARCH", name: eventType + " " + miles + "mi", latitude: lat, longitude: lng, radiusMiles: miles, eventType: eventType };
+        var from = ($("s-from") || {}).value, to = ($("s-to") || {}).value;
+        if (from) body.startDateAfter = from; if (to) body.startDateBefore = to;
+        postWatch(body, "search-error");
+      };
+      if ($("event-save")) $("event-save").onclick = function (e) {
+        if (e) e.preventDefault();
+        var eventId = (($("e-id") || {}).value || "").trim();
+        if (!eventId) { setText("event-error", "Event id is required"); return; }
+        postWatch({ kind: "EVENT", eventId: eventId, name: eventId }, "event-error");
+      };
+      if ($("refresh")) $("refresh").onclick = function () { loadWatches(); };
+      loadOptions();
+      if (token()) api("/api/auth/me").then(function (data) { showDesk(data.user); }).catch(function () {});
     })();
   </script>
 </body>

@@ -32,14 +32,14 @@
         <div class="grid">
           <form id="search-form" class="panel">
             <h2>New listings</h2>
-            <p class="lede">Type an address or click the map. Coordinates are stored in the background.</p>
+            <p class="lede">Type an address and click Find address. A Geoapify map pin appears below.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
             <div class="row">
               <button type="button" id="geocode" class="ghost">Find address</button>
               <button type="button" id="geo" class="ghost">Use my location</button>
             </div>
-            <div id="map" class="map" role="application" aria-label="Choose a location"></div>
-            <p id="s-coords" class="meta">No point selected</p>
+            <div id="map" class="map"><img id="map-img" alt="Map of selected location" /></div>
+            <p id="s-coords" class="meta">Find an address to drop a pin on the map</p>
             <input id="s-lat" type="hidden" />
             <input id="s-lng" type="hidden" />
             <label>Distance <span id="s-radius-val">25</span> mi <input id="s-radius" type="range" min="1" max="100" value="25" /></label>
@@ -88,7 +88,7 @@
       if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
       if (form) form.addEventListener("submit", function (e) {
         e.preventDefault(); e.stopImmediatePropagation(); if (err) err.textContent = "";
-        var email = (document.getElementById("auth-email") || {}).value || ""; email = email.trim();
+        var email = ((document.getElementById("auth-email") || {}).value || "").trim();
         var password = (document.getElementById("auth-password") || {}).value || "";
         if (!email || !password) { if (err) err.textContent = "Email and password are required"; return; }
         if (registerMode && password.length < 8) { if (err) err.textContent = "Password must be at least 8 characters"; return; }
@@ -110,30 +110,44 @@
         }).catch(function (e3) { if (err) err.textContent = e3.message || String(e3); })
         .then(function () { if (submit) submit.disabled = false; });
       });
-      function applyPoint(lat, lng, label) {
-        if (typeof setPoint === "function") { setPoint(lat, lng, label); return; }
+      function pin(lat, lng, label) {
         var la = document.getElementById("s-lat"); var lo = document.getElementById("s-lng");
-        var coords = document.getElementById("s-coords"); var addr = document.getElementById("s-address");
+        var addr = document.getElementById("s-address"); var coords = document.getElementById("s-coords"); var img = document.getElementById("map-img");
         if (la) la.value = Number(lat).toFixed(5); if (lo) lo.value = Number(lng).toFixed(5);
-        if (coords) coords.textContent = Number(lat).toFixed(5) + ", " + Number(lng).toFixed(5);
         if (label && addr) addr.value = label;
+        if (coords) coords.textContent = label || "Pinned";
+        if (img) img.src = "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:" + lng + "," + lat + "&zoom=14&marker=lonlat:" + lng + "," + lat + ";color:%23d4a54a;size:medium&apiKey=" + encodeURIComponent(KEY);
       }
-      var geoBtn = document.getElementById("geocode");
-      if (geoBtn) geoBtn.onclick = function () {
-        var addr = document.getElementById("s-address");
-        var searchErr = document.getElementById("search-error");
-        var q = addr ? addr.value.trim() : "";
-        if (!q) { if (searchErr) searchErr.textContent = "Type an address first"; return; }
-        if (searchErr) searchErr.textContent = "Looking up…";
-        fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
+      function lookup(q) {
+        return fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
           .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || "Geoapify HTTP " + r.status); return d; }); })
           .then(function (d) {
             var hit = d.results && d.results[0];
             if (!hit) throw new Error("No match for that address");
-            applyPoint(Number(hit.lat), Number(hit.lon), hit.formatted || q);
-            if (searchErr) searchErr.textContent = "";
-          })
-          .catch(function (e) { if (searchErr) searchErr.textContent = e.message || String(e); });
+            pin(Number(hit.lat), Number(hit.lon), hit.formatted || q);
+          });
+      }
+      var searchErr = document.getElementById("search-error");
+      var geoBtn = document.getElementById("geocode");
+      if (geoBtn) geoBtn.onclick = function (e) {
+        if (e) e.preventDefault();
+        var q = ((document.getElementById("s-address") || {}).value || "").trim();
+        if (!q) { if (searchErr) searchErr.textContent = "Type an address first"; return; }
+        if (searchErr) searchErr.textContent = "Looking up…";
+        lookup(q).then(function () { if (searchErr) searchErr.textContent = ""; })
+          .catch(function (e2) { if (searchErr) searchErr.textContent = e2.message || String(e2); });
+      };
+      var locBtn = document.getElementById("geo");
+      if (locBtn) locBtn.onclick = function (e) {
+        if (e) e.preventDefault();
+        if (!navigator.geolocation) { if (searchErr) searchErr.textContent = "This browser has no location API"; return; }
+        if (searchErr) searchErr.textContent = "Reading location…";
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          pin(pos.coords.latitude, pos.coords.longitude, "Current location");
+          if (searchErr) searchErr.textContent = "";
+        }, function (e3) {
+          if (searchErr) searchErr.textContent = (e3 && e3.message) ? e3.message : "Location permission denied";
+        }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
       };
     })();
   </script>

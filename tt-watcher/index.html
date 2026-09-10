@@ -32,16 +32,15 @@
         <div class="grid">
           <form id="search-form" class="panel">
             <h2>New listings</h2>
-            <p class="lede">Type an address and click Find address. A Geoapify map pin appears below.</p>
+            <p class="lede">Type an address and click Find address. A Geoapify map appears below.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
             <div class="row">
               <button type="button" id="geocode" class="ghost">Find address</button>
               <button type="button" id="geo" class="ghost">Use my location</button>
             </div>
-            <div id="map" class="map"><img id="map-img" alt="Map of selected location" /></div>
+            <div id="map" class="map"><img id="map-img" alt="" referrerpolicy="no-referrer" /></div>
             <p id="s-coords" class="meta">Find an address to drop a pin on the map</p>
-            <input id="s-lat" type="hidden" />
-            <input id="s-lng" type="hidden" />
+            <input id="s-lat" type="hidden" /><input id="s-lng" type="hidden" />
             <label>Distance <span id="s-radius-val">25</span> mi <input id="s-radius" type="range" min="1" max="100" value="25" /></label>
             <label>Event type <select id="s-type"></select></label>
             <div class="row">
@@ -110,14 +109,28 @@
         }).catch(function (e3) { if (err) err.textContent = e3.message || String(e3); })
         .then(function () { if (submit) submit.disabled = false; });
       });
+      function mapUrl(lat, lng, zoom, marker) {
+        var u = "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:" + lng + "," + lat + "&zoom=" + zoom + "&apiKey=" + encodeURIComponent(KEY);
+        if (marker) u += "&marker=lonlat:" + lng + "," + lat + ";color:%23d4a54a;size:medium";
+        return u;
+      }
+      function showImg(url) {
+        var img = document.getElementById("map-img");
+        if (!img) return;
+        img.referrerPolicy = "no-referrer";
+        img.classList.add("is-on");
+        img.src = url;
+      }
       function pin(lat, lng, label) {
         var la = document.getElementById("s-lat"); var lo = document.getElementById("s-lng");
-        var addr = document.getElementById("s-address"); var coords = document.getElementById("s-coords"); var img = document.getElementById("map-img");
+        var addr = document.getElementById("s-address"); var coords = document.getElementById("s-coords");
         if (la) la.value = Number(lat).toFixed(5); if (lo) lo.value = Number(lng).toFixed(5);
         if (label && addr) addr.value = label;
         if (coords) coords.textContent = label || "Pinned";
-        if (img) img.src = "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:" + lng + "," + lat + "&zoom=14&marker=lonlat:" + lng + "," + lat + ";color:%23d4a54a;size:medium&apiKey=" + encodeURIComponent(KEY);
+        showImg(mapUrl(lat, lng, 14, true));
       }
+      window.ttPin = pin;
+      showImg(mapUrl(39.8283, -98.5795, 3, false));
       function lookup(q) {
         return fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
           .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || "Geoapify HTTP " + r.status); return d; }); })

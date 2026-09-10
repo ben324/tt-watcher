@@ -1,0 +1,8 @@
+**/.git
+**/out
+**/*.class
+**/.idea
+**/.vscode
+**/node_modules
+data/*.tmp
+*.zip

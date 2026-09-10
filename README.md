@@ -10,27 +10,26 @@ riftbound-schema/     Document schema
 tt-watcher/           Frontend
 ```
 
-## Run
+## Run with Docker
 
-Need JDK 17+.
-
-**Windows** (two terminals):
-
-```bat
-cd riftbound-internal
-run-internal.bat
-
-cd riftbound-api
-run-api.bat
-```
-
-**macOS / Linux:**
+Install Docker Desktop, then from the repo root:
 
 ```sh
-cd riftbound-internal && ./run-internal.sh
-cd riftbound-api && ./run-api.sh
+docker compose up --build
 ```
 
 Open http://127.0.0.1:8080/
 
-Internal service must be running to pin an event id.
+One SEARCH job pass:
+
+```sh
+docker compose --profile job run --rm job
+```
+
+Stop with Ctrl+C, then `docker compose down`.
+
+## Run without Docker
+
+Need JDK 17+.
+
+Windows: `run-local.bat` or the two `run-*.bat` scripts.

@@ -1,0 +1,43 @@
+services:
+  internal:
+    build:
+      context: .
+      target: internal
+    ports:
+      - "8081:8081"
+    environment:
+      INTERNAL_PORT: "8081"
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
+
+  api:
+    build:
+      context: .
+      target: api
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      INTERNAL_BASE_URL: http://internal:8081
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
+      RIFTBOUND_STORE: /app/data/store.json
+      TT_WATCHER_DIR: /app/tt-watcher
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-87ad304e5f5a4e04a07fdada78297a92}
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - internal
+
+  job:
+    build:
+      context: .
+      target: job
+    environment:
+      INTERNAL_BASE_URL: http://internal:8081
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
+      RIFTBOUND_STORE: /app/data/store.json
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - internal
+      - api
+    profiles: ["job"]

@@ -77,7 +77,7 @@
       function $(id) { return document.getElementById(id); }
       function setText(id, msg) { var el = $(id); if (el) el.textContent = msg || ""; }
       function escapeHtml(s) {
-        return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        return String(s == null ? "" : s).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);
       }
       function api(path, opts) {
         opts = opts || {};
@@ -226,6 +226,10 @@
         postWatch({ kind: "EVENT", eventId: eventId, name: eventId }, "event-error");
       };
       if ($("refresh")) $("refresh").onclick = function () { loadWatches(); };
+      var now = new Date();
+      var todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+      if ($("s-from") && !$("s-from").value) $("s-from").value = todayStr;
+      if ($("s-to") && !$("s-to").value) $("s-to").value = todayStr;
       loadOptions();
       if (token()) api("/api/auth/me").then(function (data) { showDesk(data.user); }).catch(function () {});
     })();

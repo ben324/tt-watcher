@@ -14,7 +14,6 @@ services:
       context: .
       target: api
     ports:
-      - "80:8080"
       - "8080:8080"
     environment:
       PORT: "8080"
@@ -27,6 +26,21 @@ services:
       - ./data:/app/data
     depends_on:
       - internal
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+      CADDY_EMAIL: ${CADDY_EMAIL:-admin@localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
 
   job:
     build:
@@ -42,3 +56,7 @@ services:
       - internal
       - api
     profiles: ["job"]
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -19,11 +19,13 @@ public final class ApiMain {
         App app = new App(dataFile);
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
         AuthHandler auth = new AuthHandler(app);
+        server.createContext("/api/health", new HealthHandler());
         server.createContext("/api/auth", auth);
         server.createContext("/api/me", auth);
         server.createContext("/api/watches", new WatchesHandler(app));
         server.createContext("/api/events", new EventsHandler(app));
         server.createContext("/api/options", new OptionsHandler(app));
+        server.createContext("/api/geocode", new GeocodeHandler(app));
         Path web = webRoot();
         if (Files.isDirectory(web)) server.createContext("/", new StaticHandler(web));
         else server.createContext("/", new NotFoundHandler());

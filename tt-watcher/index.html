@@ -32,14 +32,13 @@
         <div class="grid">
           <form id="search-form" class="panel" action="#" method="post" onsubmit="return false;">
             <h2>New listings</h2>
-            <p class="lede">Type an address and click Find address. A Geoapify map appears below.</p>
+            <p class="lede">Type an address and click Find address. We store latitude and longitude in the background.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
             <div class="row">
               <button type="button" id="geocode" class="ghost">Find address</button>
               <button type="button" id="geo" class="ghost">Use my location</button>
             </div>
-            <div id="map" class="map"><img id="map-img" alt="" referrerpolicy="no-referrer" /></div>
-            <p id="s-coords" class="meta">Find an address to drop a pin on the map</p>
+            <p id="s-coords" class="meta">No location yet</p>
             <input id="s-lat" type="hidden" /><input id="s-lng" type="hidden" />
             <label>Distance <span id="s-radius-val">25</span> mi <input id="s-radius" type="range" min="1" max="100" value="25" /></label>
             <label>Event type <select id="s-type"></select></label>
@@ -47,14 +46,14 @@
               <label>From <input id="s-from" type="date" /></label>
               <label>To <input id="s-to" type="date" /></label>
             </div>
-            <button type="button" id="search-save" class="primary">Watch this search</button>
+            <button type="button" id="search-save" class="primary compact">Watch this search</button>
             <p id="search-error" class="err"></p>
           </form>
           <form id="event-form" class="panel" action="#" method="post" onsubmit="return false;">
             <h2>One event</h2>
             <p class="lede">Paste an official event id. We check it is upcoming before saving.</p>
             <label>Event id <input id="e-id" type="text" inputmode="numeric" placeholder="774093" /></label>
-            <button type="button" id="event-save" class="primary">Watch this event</button>
+            <button type="button" id="event-save" class="primary compact">Watch this event</button>
             <p id="event-error" class="err"></p>
           </form>
         </div>
@@ -111,28 +110,14 @@
       if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
       if (form) form.addEventListener("submit", function (e) { e.preventDefault(); e.stopImmediatePropagation(); doLogin(); });
       if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
-      function mapUrl(lat, lng, zoom, marker) {
-        var u = "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:" + lng + "," + lat + "&zoom=" + zoom + "&apiKey=" + encodeURIComponent(KEY);
-        if (marker) u += "&marker=lonlat:" + lng + "," + lat + ";color:%23d4a54a;size:medium";
-        return u;
-      }
-      function showImg(url) {
-        var img = document.getElementById("map-img");
-        if (!img) return;
-        img.referrerPolicy = "no-referrer";
-        img.classList.add("is-on");
-        img.src = url;
-      }
       function pin(lat, lng, label) {
         var la = document.getElementById("s-lat"); var lo = document.getElementById("s-lng");
         var addr = document.getElementById("s-address"); var coords = document.getElementById("s-coords");
         if (la) la.value = Number(lat).toFixed(5); if (lo) lo.value = Number(lng).toFixed(5);
         if (label && addr) addr.value = label;
-        if (coords) coords.textContent = label || "Pinned";
-        showImg(mapUrl(lat, lng, 14, true));
+        if (coords) coords.textContent = label || "Location saved";
       }
       window.ttPin = pin;
-      showImg(mapUrl(39.8283, -98.5795, 3, false));
       function lookup(q) {
         return fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
           .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || "Geoapify HTTP " + r.status); return d; }); })
@@ -167,15 +152,8 @@
       document.addEventListener("keydown", function (e) {
         if (e.key !== "Enter") return;
         var id = e.target && e.target.id;
-        if (id === "s-address") {
-          e.preventDefault();
-          e.stopPropagation();
-          if (geoBtn) geoBtn.click();
-        } else if (id === "auth-email" || id === "auth-password") {
-          e.preventDefault();
-          e.stopPropagation();
-          doLogin();
-        }
+        if (id === "s-address") { e.preventDefault(); e.stopPropagation(); if (geoBtn) geoBtn.click(); }
+        else if (id === "auth-email" || id === "auth-password") { e.preventDefault(); e.stopPropagation(); doLogin(); }
       }, true);
     })();
   </script>

@@ -25,10 +25,13 @@ function setLoggedIn(user) {
   $("logout").onclick = logout;
 }
 function setLoggedOut() {
-  localStorage.removeItem(tokenKey);
   $("auth").classList.remove("hidden"); $("desk").classList.add("hidden"); $("who").classList.add("hidden"); $("who").innerHTML = "";
 }
-async function logout() { try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {} setLoggedOut(); }
+async function logout() {
+  try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {}
+  localStorage.removeItem(tokenKey);
+  setLoggedOut();
+}
 window.afterLogin = async function (user) { setLoggedIn(user); await bootDesk(); };
 function setPoint(lat, lng, address) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -38,32 +41,34 @@ function setPoint(lat, lng, address) {
   if (typeof window.ttPin === "function") window.ttPin(lat, lng, address);
 }
 window.setPoint = setPoint;
-async function initMap() { return; }
-if ($("s-radius")) $("s-radius").oninput = () => {
-  if ($("s-radius-val")) $("s-radius-val").textContent = val("s-radius") || "25";
-};
-if ($("search-form")) $("search-form").onsubmit = async (e) => {
-  e.preventDefault(); if ($("search-error")) $("search-error").textContent = "";
+if ($("search-form")) $("search-form").onsubmit = (e) => { e.preventDefault(); return false; };
+if ($("event-form")) $("event-form").onsubmit = (e) => { e.preventDefault(); return false; };
+if ($("auth-form")) $("auth-form").onsubmit = (e) => { e.preventDefault(); return false; };
+async function saveSearch() {
+  if ($("search-error")) $("search-error").textContent = "";
   const latitude = Number(val("s-lat")); const longitude = Number(val("s-lng"));
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !val("s-lat") || !val("s-lng")) {
-    $("search-error").textContent = "Find an address first so we can pin it on the map"; return;
+    if ($("search-error")) $("search-error").textContent = "Find an address first so we can pin it on the map";
+    return;
   }
   const body = { kind: "SEARCH", name: (val("s-type") || "ALL") + " " + (val("s-radius") || 25) + "mi", latitude, longitude, radiusMiles: Number(val("s-radius") || 25), eventType: val("s-type") || "ALL" };
   if (val("s-from")) body.startDateAfter = val("s-from");
   if (val("s-to")) body.startDateBefore = val("s-to");
   try { await api("/api/watches", { method: "POST", body: JSON.stringify(body) }); await loadWatches(); }
-  catch (err) { $("search-error").textContent = err.message; }
-};
-if ($("event-form")) $("event-form").onsubmit = async (e) => {
-  e.preventDefault(); if ($("event-error")) $("event-error").textContent = "";
+  catch (err) { if ($("search-error")) $("search-error").textContent = err.message; }
+}
+async function saveEvent() {
+  if ($("event-error")) $("event-error").textContent = "";
   const eventId = val("e-id").trim();
-  if (!eventId) { $("event-error").textContent = "Event id is required"; return; }
+  if (!eventId) { if ($("event-error")) $("event-error").textContent = "Event id is required"; return; }
   try {
     await api("/api/watches", { method: "POST", body: JSON.stringify({ kind: "EVENT", eventId, name: eventId }) });
     if ($("e-id")) $("e-id").value = "";
     await loadWatches();
-  } catch (err) { $("event-error").textContent = err.message; }
-};
+  } catch (err) { if ($("event-error")) $("event-error").textContent = err.message; }
+}
+if ($("search-save")) $("search-save").onclick = (e) => { e.preventDefault(); saveSearch(); };
+if ($("event-save")) $("event-save").onclick = (e) => { e.preventDefault(); saveEvent(); };
 if ($("refresh")) $("refresh").onclick = () => loadWatches();
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);

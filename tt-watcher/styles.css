@@ -44,7 +44,7 @@ button { border: 1px solid var(--line); background: transparent; color: var(--te
 .watches li { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--line); }
 .badge { display: inline-block; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid var(--gold-dim); color: var(--gold); padding: 1px 6px; margin-right: 8px; }
 .meta { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
-.map { height: 240px; width: 100%; border: 1px solid var(--line); background: #0e1016; z-index: 1; }
+.map { height: 280px; width: 100%; border: 1px solid var(--line); background: #0e1016; z-index: 1; }
 .leaflet-container { font: inherit; background: #0e1016; }
 @media (max-width: 720px) {
   .grid, .row { grid-template-columns: 1fr; }

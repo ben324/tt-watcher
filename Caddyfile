@@ -2,6 +2,11 @@
 	email {$CADDY_EMAIL}
 }
 
+:80 {
+	encode gzip
+	reverse_proxy api:8080
+}
+
 {$SITE_ADDRESS} {
 	encode gzip
 	reverse_proxy api:8080

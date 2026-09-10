@@ -30,21 +30,32 @@ function setLoggedOut() {
 }
 async function logout() { try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {} setLoggedOut(); }
 let registerMode = false;
-$("tab-login").onclick = () => { registerMode = false; $("tab-login").classList.add("on"); $("tab-register").classList.remove("on"); $("auth-name-wrap").classList.add("hidden"); $("auth-submit").textContent = "Log in"; };
-$("tab-register").onclick = () => { registerMode = true; $("tab-register").classList.add("on"); $("tab-login").classList.remove("on"); $("auth-name-wrap").classList.remove("hidden"); $("auth-submit").textContent = "Register"; };
+function setAuthMode(register) {
+  registerMode = register;
+  $("tab-login").classList.toggle("on", !register);
+  $("tab-register").classList.toggle("on", register);
+  $("auth-submit").textContent = register ? "Register" : "Log in";
+  $("auth-password").autocomplete = register ? "new-password" : "current-password";
+}
+$("tab-login").onclick = () => setAuthMode(false);
+$("tab-register").onclick = () => setAuthMode(true);
 $("auth-form").onsubmit = async (e) => {
   e.preventDefault();
   $("auth-error").textContent = "";
-  const payload = { email: $("auth-email").value.trim(), password: $("auth-password").value };
-  const name = $("auth-name").value.trim();
-  if (registerMode && name) payload.displayName = name;
+  const email = $("auth-email").value.trim();
+  const password = $("auth-password").value;
+  if (!email || !password) { $("auth-error").textContent = "Email and password are required"; return; }
+  if (registerMode && password.length < 8) { $("auth-error").textContent = "Password must be at least 8 characters"; return; }
+  $("auth-submit").disabled = true;
   try {
     const path = registerMode ? "/api/auth/register" : "/api/auth/login";
-    const data = await api(path, { method: "POST", body: JSON.stringify(payload) });
+    const data = await api(path, { method: "POST", body: JSON.stringify({ email, password }) });
+    if (!data.token || !data.user) throw new Error("Login did not return a session");
     localStorage.setItem(tokenKey, data.token);
     setLoggedIn(data.user);
     await bootDesk();
   } catch (err) { $("auth-error").textContent = err.message; }
+  finally { $("auth-submit").disabled = false; }
 };
 $("s-radius").oninput = () => { $("s-radius-val").textContent = $("s-radius").value; };
 $("geo").onclick = () => {
@@ -71,7 +82,9 @@ $("event-form").onsubmit = async (e) => {
   } catch (err) { $("event-error").textContent = err.message; }
 };
 $("refresh").onclick = () => loadWatches();
-function escapeHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 async function loadWatches() {
   const box = $("watches");
   $("list-error").textContent = "";
@@ -100,6 +113,7 @@ async function loadOptions() {
 async function bootDesk() { await loadOptions(); await loadWatches(); }
 async function start() {
   if (!token()) { setLoggedOut(); return; }
-  try { const me = await api("/api/auth/me"); setLoggedIn(me.user); await bootDesk(); } catch (_) { setLoggedOut(); }
+  try { const me = await api("/api/auth/me"); setLoggedIn(me.user); await bootDesk(); }
+  catch (_) { setLoggedOut(); }
 }
 start();

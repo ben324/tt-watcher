@@ -26,7 +26,7 @@
           <button type="button" class="primary" id="auth-submit">Log in</button>
         </form>
         <p id="auth-error" class="err"></p>
-        <p id="api-status" class="meta">Checking API…</p>
+        <p id="api-status" class="meta">Checking API at this page…</p>
       </section>
       <section id="desk" class="hidden">
         <div class="grid">
@@ -65,19 +65,19 @@
       </section>
     </main>
   </div>
+  <script src="health.js"></script>
   <script src="app.js"></script>
   <script>
     (function () {
       var KEY = "87ad304e5f5a4e04a07fdada78297a92";
       var TOKEN_KEY = "tt-watcher-token";
       var registerMode = false;
-      var status = document.getElementById("api-status");
       var submit = document.getElementById("auth-submit");
       function token() { return localStorage.getItem(TOKEN_KEY) || ""; }
-      function $(id) { return document.getElementById(id); }
-      function setText(id, msg) { var el = $(id); if (el) el.textContent = msg || ""; }
+      function byId(id) { return document.getElementById(id); }
+      function setText(id, msg) { var el = byId(id); if (el) el.textContent = msg || ""; }
       function escapeHtml(s) {
-        return String(s == null ? "" : s).replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">").replace(/"/g, """);
+        return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
       function api(path, opts) {
         opts = opts || {};
@@ -93,13 +93,13 @@
         });
       }
       function pin(lat, lng, label) {
-        if ($("s-lat")) $("s-lat").value = Number(lat).toFixed(5);
-        if ($("s-lng")) $("s-lng").value = Number(lng).toFixed(5);
-        if (label && $("s-address")) $("s-address").value = label;
-        if ($("s-coords")) $("s-coords").textContent = (label || "Location saved") + "  ·  " + (($("s-radius") || {}).value || "25") + " mi";
+        if (byId("s-lat")) byId("s-lat").value = Number(lat).toFixed(5);
+        if (byId("s-lng")) byId("s-lng").value = Number(lng).toFixed(5);
+        if (label && byId("s-address")) byId("s-address").value = label;
+        if (byId("s-coords")) byId("s-coords").textContent = (label || "Location saved") + "  ·  " + ((byId("s-radius") || {}).value || "25") + " mi";
       }
       function loadOptions() {
-        var sel = $("s-type"); if (!sel) return;
+        var sel = byId("s-type"); if (!sel) return;
         api("/api/options").then(function (data) {
           sel.innerHTML = "";
           (data.eventTypes || []).forEach(function (t) {
@@ -108,7 +108,7 @@
         }).catch(function (e) { setText("search-error", "Could not load event types: " + e.message); });
       }
       function loadWatches() {
-        var box = $("watches"); if (!box) return;
+        var box = byId("watches"); if (!box) return;
         setText("list-error", "");
         api("/api/watches").then(function (data) {
           var watches = data.watches || [];
@@ -125,21 +125,21 @@
       }
       window.loadWatches = loadWatches;
       function showDesk(user) {
-        $("auth").classList.add("hidden"); $("desk").classList.remove("hidden"); $("who").classList.remove("hidden");
-        $("who").innerHTML = (user && user.email ? user.email : "signed in") + ' <button type="button" class="ghost" id="logout">Log out</button>';
-        var out = $("logout");
+        byId("auth").classList.add("hidden"); byId("desk").classList.remove("hidden"); byId("who").classList.remove("hidden");
+        byId("who").innerHTML = (user && user.email ? user.email : "signed in") + ' <button type="button" class="ghost" id="logout">Log out</button>';
+        var out = byId("logout");
         if (out) out.onclick = function () {
           api("/api/auth/logout", { method: "POST" }).catch(function () {});
           localStorage.removeItem(TOKEN_KEY);
-          $("auth").classList.remove("hidden"); $("desk").classList.add("hidden"); $("who").classList.add("hidden"); $("who").innerHTML = "";
+          byId("auth").classList.remove("hidden"); byId("desk").classList.add("hidden"); byId("who").classList.add("hidden"); byId("who").innerHTML = "";
         };
         loadOptions(); loadWatches();
       }
       window.afterLogin = function (user) { showDesk(user); };
       function doLogin() {
         setText("auth-error", "");
-        var email = (($("auth-email") || {}).value || "").trim();
-        var password = ($("auth-password") || {}).value || "";
+        var email = ((byId("auth-email") || {}).value || "").trim();
+        var password = (byId("auth-password") || {}).value || "";
         if (!email || !password) { setText("auth-error", "Email and password are required"); return; }
         if (registerMode && password.length < 8) { setText("auth-error", "Password must be at least 8 characters"); return; }
         if (submit) submit.disabled = true;
@@ -151,21 +151,16 @@
           }).catch(function (e) { setText("auth-error", e.message); })
           .then(function () { if (submit) submit.disabled = false; });
       }
-      fetch("/api/health").then(function (r) {
-        if (status) status.textContent = r.ok ? ("API is up at " + location.origin) : ("API returned " + r.status);
-      }).catch(function () {
-        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
-      });
-      var tabLogin = $("tab-login"), tabRegister = $("tab-register");
+      var tabLogin = byId("tab-login"), tabRegister = byId("tab-register");
       if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
       if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
       if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
-      var radius = $("s-radius"), radiusVal = $("s-radius-val");
+      var radius = byId("s-radius"), radiusVal = byId("s-radius-val");
       function syncMiles() { if (radius && radiusVal) radiusVal.textContent = radius.value; }
       if (radius) { radius.oninput = syncMiles; radius.onchange = syncMiles; radius.addEventListener("input", syncMiles); syncMiles(); }
-      if ($("geocode")) $("geocode").onclick = function (e) {
+      if (byId("geocode")) byId("geocode").onclick = function (e) {
         if (e) e.preventDefault();
-        var q = (($("s-address") || {}).value || "").trim();
+        var q = ((byId("s-address") || {}).value || "").trim();
         if (!q) { setText("search-error", "Type an address first"); return; }
         setText("search-error", "Looking up…");
         fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
@@ -177,7 +172,7 @@
             setText("search-error", "");
           }).catch(function (e2) { setText("search-error", e2.message || String(e2)); });
       };
-      if ($("geo")) $("geo").onclick = function (e) {
+      if (byId("geo")) byId("geo").onclick = function (e) {
         if (e) e.preventDefault();
         if (!window.isSecureContext) { setText("search-error", "Location needs http://127.0.0.1:8080/ (not a file:// page)"); return; }
         if (!navigator.geolocation) { setText("search-error", "This browser has no location API"); return; }
@@ -190,11 +185,7 @@
             .then(function (d) { var hit = d.results && d.results[0]; if (hit && hit.formatted) pin(pos.coords.latitude, pos.coords.longitude, hit.formatted); })
             .catch(function () {});
         }, function (e3) {
-          var msg = "Location permission denied";
-          if (e3 && e3.code === 1) msg = "Location permission denied — allow it for this site";
-          else if (e3 && e3.code === 2) msg = "Location unavailable";
-          else if (e3 && e3.code === 3) msg = "Location timed out";
-          else if (e3 && e3.message) msg = e3.message;
+          var msg = (e3 && e3.message) ? e3.message : "Location permission denied";
           setText("search-error", msg);
         }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
       };
@@ -205,31 +196,31 @@
           .then(function () { setText(errId, ""); loadWatches(); })
           .catch(function (e) { setText(errId, e.message); });
       }
-      if ($("search-save")) $("search-save").onclick = function (e) {
+      if (byId("search-save")) byId("search-save").onclick = function (e) {
         if (e) e.preventDefault();
-        var latEl = $("s-lat"), lngEl = $("s-lng");
+        var latEl = byId("s-lat"), lngEl = byId("s-lng");
         var lat = Number(latEl && latEl.value), lng = Number(lngEl && lngEl.value);
         if (!latEl || !lngEl || !latEl.value || !lngEl.value || !Number.isFinite(lat) || !Number.isFinite(lng)) {
           setText("search-error", "Find an address or use your location first"); return;
         }
         var miles = Number((radius && radius.value) || 25);
-        var eventType = ($("s-type") && $("s-type").value) || "ALL";
+        var eventType = (byId("s-type") && byId("s-type").value) || "ALL";
         var body = { kind: "SEARCH", name: eventType + " " + miles + "mi", latitude: lat, longitude: lng, radiusMiles: miles, eventType: eventType };
-        var from = ($("s-from") || {}).value, to = ($("s-to") || {}).value;
+        var from = (byId("s-from") || {}).value, to = (byId("s-to") || {}).value;
         if (from) body.startDateAfter = from; if (to) body.startDateBefore = to;
         postWatch(body, "search-error");
       };
-      if ($("event-save")) $("event-save").onclick = function (e) {
+      if (byId("event-save")) byId("event-save").onclick = function (e) {
         if (e) e.preventDefault();
-        var eventId = (($("e-id") || {}).value || "").trim();
+        var eventId = ((byId("e-id") || {}).value || "").trim();
         if (!eventId) { setText("event-error", "Event id is required"); return; }
         postWatch({ kind: "EVENT", eventId: eventId, name: eventId }, "event-error");
       };
-      if ($("refresh")) $("refresh").onclick = function () { loadWatches(); };
+      if (byId("refresh")) byId("refresh").onclick = function () { loadWatches(); };
       var now = new Date();
       var todayStr = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
-      if ($("s-from") && !$("s-from").value) $("s-from").value = todayStr;
-      if ($("s-to") && !$("s-to").value) $("s-to").value = todayStr;
+      if (byId("s-from") && !byId("s-from").value) byId("s-from").value = todayStr;
+      if (byId("s-to") && !byId("s-to").value) byId("s-to").value = todayStr;
       loadOptions();
       if (token()) api("/api/auth/me").then(function (data) { showDesk(data.user); }).catch(function () {});
     })();

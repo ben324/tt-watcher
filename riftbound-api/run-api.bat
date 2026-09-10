@@ -14,4 +14,5 @@ javac -encoding UTF-8 -d out ^
   %LIB_SRC%\com\riftbound\events\playriftbound\*.java ^
   src\com\riftbound\api\*.java
 if errorlevel 1 exit /b 1
+if not defined GEOAPIFY_API_KEY set GEOAPIFY_API_KEY=87ad304e5f5a4e04a07fdada78297a92
 java -cp out com.riftbound.api.ApiMain %*

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tt-watcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <div class="brand">
+        <span class="mark">TT</span>
+        <div>
+          <strong>tt-watcher</strong>
+          <p>Riftbound seat and listing alerts</p>
+        </div>
+      </div>
+      <div id="who" class="who hidden"></div>
+    </header>
+    <main>
+      <section id="auth" class="panel">
+        <h1>Sign in</h1>
+        <p class="lede">Watch a search for new events, or pin an event id until seats open.</p>
+        <div class="tabs">
+          <button type="button" id="tab-login" class="tab on">Log in</button>
+          <button type="button" id="tab-register" class="tab">Register</button>
+        </div>
+        <form id="auth-form">
+          <label>Email <input id="auth-email" type="email" autocomplete="email" required /></label>
+          <label>Password <input id="auth-password" type="password" minlength="8" autocomplete="current-password" required /></label>
+          <label id="auth-name-wrap" class="hidden">Display name <input id="auth-name" type="text" autocomplete="nickname" /></label>
+          <button type="submit" class="primary" id="auth-submit">Log in</button>
+        </form>
+        <p id="auth-error" class="err"></p>
+      </section>
+      <section id="desk" class="hidden">
+        <div class="grid">
+          <form id="search-form" class="panel">
+            <h2>New listings</h2>
+            <p class="lede">Notify when a new event matches this area, type, and dates.</p>
+            <label>Label <input id="s-name" type="text" placeholder="NYC Nexus" /></label>
+            <div class="row">
+              <label>Latitude <input id="s-lat" type="number" step="any" required /></label>
+              <label>Longitude <input id="s-lng" type="number" step="any" required /></label>
+            </div>
+            <button type="button" id="geo" class="ghost">Use my location</button>
+            <label>Distance <span id="s-radius-val">25</span> mi
+              <input id="s-radius" type="range" min="1" max="100" value="25" />
+            </label>
+            <label>Event type <select id="s-type"></select></label>
+            <div class="row">
+              <label>From <input id="s-from" type="date" /></label>
+              <label>To <input id="s-to" type="date" /></label>
+            </div>
+            <button type="submit" class="primary">Watch this search</button>
+            <p id="search-error" class="err"></p>
+          </form>
+          <form id="event-form" class="panel">
+            <h2>One event</h2>
+            <p class="lede">Paste an official event id. We check it is upcoming before saving.</p>
+            <label>Event id <input id="e-id" type="text" inputmode="numeric" placeholder="774093" required /></label>
+            <label>Label <input id="e-name" type="text" placeholder="Montasy Thursday" /></label>
+            <button type="submit" class="primary">Watch this event</button>
+            <p id="event-error" class="err"></p>
+          </form>
+        </div>
+        <section class="panel">
+          <div class="list-head">
+            <h2>Your watches</h2>
+            <button type="button" id="refresh" class="ghost">Refresh</button>
+          </div>
+          <p id="list-error" class="err"></p>
+          <ul id="watches" class="watches"></ul>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

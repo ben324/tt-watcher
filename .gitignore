@@ -1,0 +1,7 @@
+out/
+*.class
+data/
+*.log
+.DS_Store
+Thumbs.db
+.env

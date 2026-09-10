@@ -48,7 +48,7 @@ async function saveSearch() {
   if ($("search-error")) $("search-error").textContent = "";
   const latitude = Number(val("s-lat")); const longitude = Number(val("s-lng"));
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !val("s-lat") || !val("s-lng")) {
-    if ($("search-error")) $("search-error").textContent = "Find an address first so we can pin it on the map";
+    if ($("search-error")) $("search-error").textContent = "Find an address first, then Watch this search";
     return;
   }
   const body = { kind: "SEARCH", name: (val("s-type") || "ALL") + " " + (val("s-radius") || 25) + "mi", latitude, longitude, radiusMiles: Number(val("s-radius") || 25), eventType: val("s-type") || "ALL" };
@@ -91,10 +91,26 @@ async function loadWatches() {
 }
 async function loadOptions() {
   const sel = $("s-type");
-  if (!sel || sel.options.length > 1) return;
+  if (!sel) return;
+  try {
+    const data = await api("/api/options");
+    const types = data.eventTypes || [];
+    sel.innerHTML = "";
+    if (!types.length) throw new Error("/api/options returned no eventTypes");
+    types.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.label;
+      sel.appendChild(opt);
+    });
+  } catch (err) {
+    sel.innerHTML = "";
+    if ($("search-error")) $("search-error").textContent = "Could not load event types: " + err.message;
+  }
 }
 async function bootDesk() { await loadOptions(); await loadWatches(); }
 async function start() {
+  loadOptions();
   if (!token()) { setLoggedOut(); return; }
   try { const me = await api("/api/auth/me"); setLoggedIn(me.user); await bootDesk(); }
   catch (_) { setLoggedOut(); }

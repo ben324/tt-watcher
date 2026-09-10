@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>tt-watcher</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -37,12 +38,18 @@
         <div class="grid">
           <form id="search-form" class="panel">
             <h2>New listings</h2>
-            <p class="lede">Notify when a new event matches this area, type, and dates.</p>
+            <p class="lede">Type an address or click the map. We store latitude and longitude in the background.</p>
+            <label>Address
+              <input id="s-address" type="text" placeholder="123 Main St, New York, NY" autocomplete="street-address" />
+            </label>
             <div class="row">
-              <label>Latitude <input id="s-lat" type="number" step="any" required /></label>
-              <label>Longitude <input id="s-lng" type="number" step="any" required /></label>
+              <button type="button" id="geocode" class="ghost">Find address</button>
+              <button type="button" id="geo" class="ghost">Use my location</button>
             </div>
-            <button type="button" id="geo" class="ghost">Use my location</button>
+            <div id="map" class="map" role="application" aria-label="Choose a location"></div>
+            <p id="s-coords" class="meta">No point selected</p>
+            <input id="s-lat" type="hidden" />
+            <input id="s-lng" type="hidden" />
             <label>Distance <span id="s-radius-val">25</span> mi
               <input id="s-radius" type="range" min="1" max="100" value="25" />
             </label>
@@ -73,6 +80,7 @@
       </section>
     </main>
   </div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

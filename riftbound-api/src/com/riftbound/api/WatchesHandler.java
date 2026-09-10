@@ -1,6 +1,5 @@
 package com.riftbound.api;
 
-import com.riftbound.events.EventSource;
 import com.riftbound.events.EventSources;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;

@@ -29,7 +29,6 @@ final class Store {
         byte[] salt = Passwords.salt();
         byte[] hash = Passwords.hash(password, salt);
         User user = new User(UUID.randomUUID().toString(), normalized,
-                displayName == null || displayName.isBlank() ? displayNameFrom(normalized) : displayName.trim(),
                 Passwords.hex(salt), Passwords.hex(hash), Instant.now().toString());
         users.add(user); persist(); return user;
     }

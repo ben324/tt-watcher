@@ -1,10 +1,8 @@
 const API = "";
 const tokenKey = "tt-watcher-token";
-const GEO_KEY = "87ad304e5f5a4e04a07fdada78297a92";
 const $ = (id) => document.getElementById(id);
 const val = (id) => { const el = $(id); return el && "value" in el ? String(el.value) : ""; };
 function token() { return localStorage.getItem(tokenKey) || ""; }
-function geoapifyKey() { return val("s-geo-key").trim() || localStorage.getItem("tt-watcher-geoapify") || GEO_KEY; }
 async function api(path, opts = {}) {
   const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
   if (opts.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
@@ -32,70 +30,23 @@ function setLoggedOut() {
 }
 async function logout() { try { await api("/api/auth/logout", { method: "POST" }); } catch (_) {} setLoggedOut(); }
 window.afterLogin = async function (user) { setLoggedIn(user); await bootDesk(); };
-let map, mapMarker, mapCircle;
-function currentRadiusMiles() { return Number(val("s-radius") || 25); }
 function setPoint(lat, lng, address) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
   if ($("s-lat")) $("s-lat").value = lat.toFixed(5);
   if ($("s-lng")) $("s-lng").value = lng.toFixed(5);
   if (address && $("s-address")) $("s-address").value = address;
-  if ($("s-coords")) $("s-coords").textContent = (address || "Pinned") + "  ·  " + currentRadiusMiles() + " mi";
-  if (!map || typeof L === "undefined") {
-    Promise.resolve(initMap()).then(() => { if (map) setPoint(lat, lng, address); });
-    return;
-  }
-  const here = [lat, lng];
-  if (!mapMarker) mapMarker = L.marker(here).addTo(map); else mapMarker.setLatLng(here);
-  const meters = currentRadiusMiles() * 1609.34;
-  if (!mapCircle) mapCircle = L.circle(here, { radius: meters, color: "#d4a54a", weight: 1, fillOpacity: 0.08 }).addTo(map);
-  else { mapCircle.setLatLng(here); mapCircle.setRadius(meters); }
-  map.setView(here, 14);
+  if (typeof window.ttPin === "function") window.ttPin(lat, lng, address);
 }
 window.setPoint = setPoint;
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script"); s.src = src; s.async = true;
-    s.onload = () => resolve(); s.onerror = () => reject(new Error("Could not load " + src));
-    document.head.appendChild(s);
-  });
-}
-function loadCss(href) {
-  const link = document.createElement("link"); link.rel = "stylesheet"; link.href = href; document.head.appendChild(link);
-}
-async function loadLeaflet() {
-  if (typeof L !== "undefined") return;
-  loadCss("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
-  try { await loadScript("https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"); }
-  catch (_) { loadCss("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"); await loadScript("https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"); }
-}
-async function initMap() {
-  if (map || !$("map")) return;
-  try { await loadLeaflet(); } catch (_) { return; }
-  if (typeof L === "undefined") return;
-  map = L.map("map", { scrollWheelZoom: true }).setView([39.8283, -98.5795], 4);
-  L.tileLayer("https://maps.geoapify.com/v1/tile/osm-bright/{z}/{x}/{y}.png?apiKey=" + encodeURIComponent(geoapifyKey()), {
-    maxZoom: 20, attribution: "Powered by Geoapify | © OpenStreetMap"
-  }).addTo(map);
-  map.on("click", async (ev) => {
-    setPoint(ev.latlng.lat, ev.latlng.lng);
-    try {
-      const data = await fetch("https://api.geoapify.com/v1/geocode/reverse?format=json&lat=" + ev.latlng.lat + "&lon=" + ev.latlng.lng + "&apiKey=" + encodeURIComponent(geoapifyKey())).then((r) => r.json());
-      const hit = data.results && data.results[0];
-      if (hit && hit.formatted) setPoint(ev.latlng.lat, ev.latlng.lng, hit.formatted);
-    } catch (_) {}
-  });
-  setTimeout(() => map && map.invalidateSize(), 80);
-}
+async function initMap() { return; }
 if ($("s-radius")) $("s-radius").oninput = () => {
   if ($("s-radius-val")) $("s-radius-val").textContent = val("s-radius") || "25";
-  const lat = Number(val("s-lat")); const lng = Number(val("s-lng"));
-  if (Number.isFinite(lat) && Number.isFinite(lng)) setPoint(lat, lng);
 };
 if ($("search-form")) $("search-form").onsubmit = async (e) => {
   e.preventDefault(); if ($("search-error")) $("search-error").textContent = "";
   const latitude = Number(val("s-lat")); const longitude = Number(val("s-lng"));
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !val("s-lat") || !val("s-lng")) {
-    $("search-error").textContent = "Pick a point on the map or look up an address"; return;
+    $("search-error").textContent = "Find an address first so we can pin it on the map"; return;
   }
   const body = { kind: "SEARCH", name: (val("s-type") || "ALL") + " " + (val("s-radius") || 25) + "mi", latitude, longitude, radiusMiles: Number(val("s-radius") || 25), eventType: val("s-type") || "ALL" };
   if (val("s-from")) body.startDateAfter = val("s-from");
@@ -140,7 +91,7 @@ async function loadOptions() {
     (data.eventTypes || []).forEach((t) => { const opt = document.createElement("option"); opt.value = t.id; opt.textContent = t.label; sel.appendChild(opt); });
   } catch (_) { sel.innerHTML = '<option value="ALL">Any type</option>'; }
 }
-async function bootDesk() { await loadOptions(); await loadWatches(); await initMap(); }
+async function bootDesk() { await loadOptions(); await loadWatches(); }
 async function start() {
   if (!token()) { setLoggedOut(); return; }
   try { const me = await api("/api/auth/me"); setLoggedIn(me.user); await bootDesk(); }

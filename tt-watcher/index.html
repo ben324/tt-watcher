@@ -32,6 +32,7 @@
           <button type="submit" class="primary" id="auth-submit">Log in</button>
         </form>
         <p id="auth-error" class="err"></p>
+        <p id="api-status" class="meta">Checking API…</p>
       </section>
       <section id="desk" class="hidden">
         <div class="grid">
@@ -79,6 +80,69 @@
       </section>
     </main>
   </div>
+  <script>
+    (function () {
+      var tokenKey = "tt-watcher-token";
+      var registerMode = false;
+      var status = document.getElementById("api-status");
+      var err = document.getElementById("auth-error");
+      var form = document.getElementById("auth-form");
+      var tabLogin = document.getElementById("tab-login");
+      var tabRegister = document.getElementById("tab-register");
+      var submit = document.getElementById("auth-submit");
+      window.__ttAuthBound = true;
+      fetch("/api/health").then(function (r) {
+        if (status) status.textContent = r.ok ? "API is up at " + location.origin : "API returned " + r.status;
+      }).catch(function () {
+        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
+      });
+      if (tabLogin) tabLogin.onclick = function () {
+        registerMode = false; tabLogin.classList.add("on");
+        if (tabRegister) tabRegister.classList.remove("on");
+        if (submit) submit.textContent = "Log in";
+      };
+      if (tabRegister) tabRegister.onclick = function () {
+        registerMode = true; tabRegister.classList.add("on");
+        if (tabLogin) tabLogin.classList.remove("on");
+        if (submit) submit.textContent = "Register";
+      };
+      if (!form) return;
+      form.addEventListener("submit", function (e) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (err) err.textContent = "";
+        var emailEl = document.getElementById("auth-email");
+        var passEl = document.getElementById("auth-password");
+        var email = emailEl ? emailEl.value.trim() : "";
+        var password = passEl ? passEl.value : "";
+        if (!email || !password) { if (err) err.textContent = "Email and password are required"; return; }
+        if (registerMode && password.length < 8) { if (err) err.textContent = "Password must be at least 8 characters"; return; }
+        if (submit) submit.disabled = true;
+        var path = registerMode ? "/api/auth/register" : "/api/auth/login";
+        fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ email: email, password: password })
+        }).then(function (res) {
+          return res.text().then(function (text) {
+            var data = {};
+            try { data = text ? JSON.parse(text) : {}; } catch (e2) { data = { message: text }; }
+            if (!res.ok) throw new Error(data.message || data.error || res.statusText);
+            return data;
+          });
+        }).then(function (data) {
+          if (!data.token) throw new Error("Login did not return a session");
+          localStorage.setItem(tokenKey, data.token);
+          if (typeof window.afterLogin === "function") window.afterLogin(data.user);
+          else {
+            document.getElementById("auth").classList.add("hidden");
+            document.getElementById("desk").classList.remove("hidden");
+          }
+        }).catch(function (e3) {
+          if (err) err.textContent = e3.message || String(e3);
+        }).then(function () { if (submit) submit.disabled = false; });
+      });
+    })();
+  </script>
   <script src="app.js"></script>
 </body>
 </html>

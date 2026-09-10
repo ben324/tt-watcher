@@ -2,7 +2,7 @@
 	email {$CADDY_EMAIL}
 }
 
-:80 {
+http:// {
 	encode gzip
 	reverse_proxy api:8080 {
 		header_up Authorization {http.request.header.Authorization}

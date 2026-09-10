@@ -20,17 +20,17 @@
           <button type="button" id="tab-login" class="tab on">Log in</button>
           <button type="button" id="tab-register" class="tab">Register</button>
         </div>
-        <form id="auth-form">
+        <form id="auth-form" action="#" method="post" onsubmit="return false;">
           <label>Email <input id="auth-email" type="email" autocomplete="email" required /></label>
           <label>Password <input id="auth-password" type="password" minlength="8" autocomplete="current-password" required /></label>
-          <button type="submit" class="primary" id="auth-submit">Log in</button>
+          <button type="button" class="primary" id="auth-submit">Log in</button>
         </form>
         <p id="auth-error" class="err"></p>
         <p id="api-status" class="meta">Checking API…</p>
       </section>
       <section id="desk" class="hidden">
         <div class="grid">
-          <form id="search-form" class="panel">
+          <form id="search-form" class="panel" action="#" method="post" onsubmit="return false;">
             <h2>New listings</h2>
             <p class="lede">Type an address and click Find address. A Geoapify map appears below.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
@@ -47,14 +47,14 @@
               <label>From <input id="s-from" type="date" /></label>
               <label>To <input id="s-to" type="date" /></label>
             </div>
-            <button type="submit" class="primary">Watch this search</button>
+            <button type="button" id="search-save" class="primary">Watch this search</button>
             <p id="search-error" class="err"></p>
           </form>
-          <form id="event-form" class="panel">
+          <form id="event-form" class="panel" action="#" method="post" onsubmit="return false;">
             <h2>One event</h2>
             <p class="lede">Paste an official event id. We check it is upcoming before saving.</p>
-            <label>Event id <input id="e-id" type="text" inputmode="numeric" placeholder="774093" required /></label>
-            <button type="submit" class="primary">Watch this event</button>
+            <label>Event id <input id="e-id" type="text" inputmode="numeric" placeholder="774093" /></label>
+            <button type="button" id="event-save" class="primary">Watch this event</button>
             <p id="event-error" class="err"></p>
           </form>
         </div>
@@ -78,15 +78,8 @@
       var tabRegister = document.getElementById("tab-register");
       var submit = document.getElementById("auth-submit");
       window.__ttAuthBound = true;
-      fetch("/api/health").then(function (r) {
-        if (status) status.textContent = r.ok ? "API is up at " + location.origin : "API returned " + r.status;
-      }).catch(function () {
-        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
-      });
-      if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
-      if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
-      if (form) form.addEventListener("submit", function (e) {
-        e.preventDefault(); e.stopImmediatePropagation(); if (err) err.textContent = "";
+      function doLogin() {
+        if (err) err.textContent = "";
         var email = ((document.getElementById("auth-email") || {}).value || "").trim();
         var password = (document.getElementById("auth-password") || {}).value || "";
         if (!email || !password) { if (err) err.textContent = "Email and password are required"; return; }
@@ -108,7 +101,16 @@
           else { document.getElementById("auth").classList.add("hidden"); document.getElementById("desk").classList.remove("hidden"); }
         }).catch(function (e3) { if (err) err.textContent = e3.message || String(e3); })
         .then(function () { if (submit) submit.disabled = false; });
+      }
+      fetch("/api/health").then(function (r) {
+        if (status) status.textContent = r.ok ? "API is up at " + location.origin : "API returned " + r.status;
+      }).catch(function () {
+        if (status) status.textContent = "Cannot reach the API. Run run-local.bat and open http://127.0.0.1:8080/";
       });
+      if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
+      if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
+      if (form) form.addEventListener("submit", function (e) { e.preventDefault(); e.stopImmediatePropagation(); doLogin(); });
+      if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
       function mapUrl(lat, lng, zoom, marker) {
         var u = "https://maps.geoapify.com/v1/staticmap?style=osm-bright&width=800&height=400&center=lonlat:" + lng + "," + lat + "&zoom=" + zoom + "&apiKey=" + encodeURIComponent(KEY);
         if (marker) u += "&marker=lonlat:" + lng + "," + lat + ";color:%23d4a54a;size:medium";
@@ -162,6 +164,19 @@
           if (searchErr) searchErr.textContent = (e3 && e3.message) ? e3.message : "Location permission denied";
         }, { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 });
       };
+      document.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        var id = e.target && e.target.id;
+        if (id === "s-address") {
+          e.preventDefault();
+          e.stopPropagation();
+          if (geoBtn) geoBtn.click();
+        } else if (id === "auth-email" || id === "auth-password") {
+          e.preventDefault();
+          e.stopPropagation();
+          doLogin();
+        }
+      }, true);
     })();
   </script>
   <script src="app.js"></script>

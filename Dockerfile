@@ -1,5 +1,3 @@
-# Build once, run as api / internal / job.
-#   docker compose up --build
 FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /src
 COPY riftbound-events/riftbound-events/src /src/lib
@@ -28,6 +26,7 @@ ENV PORT=8080 \
     RIFTBOUND_STORE=/app/data/store.json \
     INTERNAL_BASE_URL=http://internal:8081 \
     INTERNAL_API_KEY=dev-internal
+ENV JAVA_TOOL_OPTIONS="-Xms32m -Xmx160m -XX:+UseSerialGC"
 EXPOSE 8080
 CMD ["java", "-cp", "out", "com.riftbound.api.ApiMain"]
 
@@ -36,6 +35,7 @@ WORKDIR /app
 COPY --from=build /out/internal /app/out
 ENV INTERNAL_PORT=8081 \
     INTERNAL_API_KEY=dev-internal
+ENV JAVA_TOOL_OPTIONS="-Xms32m -Xmx160m -XX:+UseSerialGC"
 EXPOSE 8081
 CMD ["java", "-cp", "out", "com.riftbound.internal.InternalMain"]
 

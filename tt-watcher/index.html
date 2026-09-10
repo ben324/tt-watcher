@@ -41,7 +41,26 @@
             <p id="s-coords" class="meta">No location yet</p>
             <input id="s-lat" type="hidden" /><input id="s-lng" type="hidden" />
             <label>Distance <span id="s-radius-val">25</span> mi <input id="s-radius" type="range" min="1" max="100" value="25" /></label>
-            <label>Event type <select id="s-type"></select></label>
+            <label>Event type
+              <select id="s-type">
+                <option value="ALL">Any type</option>
+                <option value="NEXUS_NIGHTS">Nexus Nights</option>
+                <option value="NEXUS_NIGHTS_1V1">Nexus Nights — 1v1</option>
+                <option value="OPEN_PLAY">Riftbound Open Play</option>
+                <option value="LEARN_TO_PLAY">Learn-to-Play</option>
+                <option value="CHAMPION_DECK_TRIAL">Champion Deck Trial</option>
+                <option value="SEALED">Sealed / Sealed Deck Challenge</option>
+                <option value="DRAFT">Draft / Draft Challenge</option>
+                <option value="CONSTRUCTED">Constructed</option>
+                <option value="PRE_RQ">Pre-RQ Challenge</option>
+                <option value="REGIONAL_QUALIFIER">Regional Qualifier</option>
+                <option value="SUMMONER_SKIRMISH">Summoner Skirmish</option>
+                <option value="TEAM_2V2">2v2 / Team Challenge</option>
+                <option value="SHOWDOWN">Showdown Series</option>
+                <option value="VENDETTA">Vendetta</option>
+                <option value="LOCALS">Locals (UVS event_type)</option>
+              </select>
+            </label>
             <div class="row">
               <label>From <input id="s-from" type="date" /></label>
               <label>To <input id="s-to" type="date" /></label>

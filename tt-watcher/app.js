@@ -1,6 +1,10 @@
 const API = "";
 const tokenKey = "tt-watcher-token";
 const $ = (id) => document.getElementById(id);
+const val = (id) => {
+  const el = $(id);
+  return el && "value" in el ? String(el.value) : "";
+};
 function token() { return localStorage.getItem(tokenKey) || ""; }
 async function api(path, opts = {}) {
   const headers = Object.assign({ Accept: "application/json" }, opts.headers || {});
@@ -42,8 +46,8 @@ $("tab-register").onclick = () => setAuthMode(true);
 $("auth-form").onsubmit = async (e) => {
   e.preventDefault();
   $("auth-error").textContent = "";
-  const email = $("auth-email").value.trim();
-  const password = $("auth-password").value;
+  const email = val("auth-email").trim();
+  const password = val("auth-password");
   if (!email || !password) { $("auth-error").textContent = "Email and password are required"; return; }
   if (registerMode && password.length < 8) { $("auth-error").textContent = "Password must be at least 8 characters"; return; }
   $("auth-submit").disabled = true;
@@ -57,7 +61,7 @@ $("auth-form").onsubmit = async (e) => {
   } catch (err) { $("auth-error").textContent = err.message; }
   finally { $("auth-submit").disabled = false; }
 };
-$("s-radius").oninput = () => { $("s-radius-val").textContent = $("s-radius").value; };
+$("s-radius").oninput = () => { $("s-radius-val").textContent = val("s-radius") || "25"; };
 $("geo").onclick = () => {
   if (!navigator.geolocation) { $("search-error").textContent = "Geolocation is not available"; return; }
   navigator.geolocation.getCurrentPosition((pos) => { $("s-lat").value = pos.coords.latitude.toFixed(5); $("s-lng").value = pos.coords.longitude.toFixed(5); }, () => { $("search-error").textContent = "Could not read location"; });
@@ -65,19 +69,28 @@ $("geo").onclick = () => {
 $("search-form").onsubmit = async (e) => {
   e.preventDefault();
   $("search-error").textContent = "";
-  const body = { kind: "SEARCH", name: $("s-name").value.trim() || "search", latitude: Number($("s-lat").value), longitude: Number($("s-lng").value), radiusMiles: Number($("s-radius").value || 25), eventType: $("s-type").value || "ALL" };
-  if ($("s-from").value) body.startDateAfter = $("s-from").value;
-  if ($("s-to").value) body.startDateBefore = $("s-to").value;
+  const body = {
+    kind: "SEARCH",
+    name: (val("s-type") || "ALL") + " " + (val("s-radius") || 25) + "mi",
+    latitude: Number(val("s-lat")),
+    longitude: Number(val("s-lng")),
+    radiusMiles: Number(val("s-radius") || 25),
+    eventType: val("s-type") || "ALL"
+  };
+  if (val("s-from")) body.startDateAfter = val("s-from");
+  if (val("s-to")) body.startDateBefore = val("s-to");
   try { await api("/api/watches", { method: "POST", body: JSON.stringify(body) }); await loadWatches(); }
   catch (err) { $("search-error").textContent = err.message; }
 };
 $("event-form").onsubmit = async (e) => {
   e.preventDefault();
   $("event-error").textContent = "";
-  const eventId = $("e-id").value.trim();
+  const eventId = val("e-id").trim();
+  if (!eventId) { $("event-error").textContent = "Event id is required"; return; }
   try {
-    await api("/api/watches", { method: "POST", body: JSON.stringify({ kind: "EVENT", eventId, name: $("e-name").value.trim() || eventId }) });
-    $("e-id").value = "";
+    await api("/api/watches", { method: "POST", body: JSON.stringify({ kind: "EVENT", eventId, name: eventId }) });
+    const idBox = $("e-id");
+    if (idBox) idBox.value = "";
     await loadWatches();
   } catch (err) { $("event-error").textContent = err.message; }
 };
@@ -104,6 +117,7 @@ async function loadWatches() {
 }
 async function loadOptions() {
   const sel = $("s-type");
+  if (!sel) return;
   sel.innerHTML = "";
   try {
     const data = await api("/api/options");

@@ -35,9 +35,19 @@ final class Body {
             else break;
         }
         if (j == i) return null;
-        try { return Double.parseDouble(json.substring(i, j)); } catch (NumberFormatException e) { return null; }
+        try { return Double.parseDouble(json.substring(i, j)); }
+        catch (NumberFormatException e) { return null; }
     }
     static boolean has(String json, String key) {
         return json != null && json.contains("\"" + key + "\":");
+    }
+    static boolean bool(String json, String key) {
+        if (!has(json, key)) return false;
+        String needle = "\"" + key + "\":";
+        int i = json.indexOf(needle);
+        if (i < 0) return false;
+        i += needle.length();
+        while (i < json.length() && Character.isWhitespace(json.charAt(i))) i++;
+        return json.startsWith("true", i);
     }
 }

@@ -57,6 +57,16 @@
             <p id="event-error" class="err"></p>
           </form>
         </div>
+        <section class="panel" id="contact-panel">
+          <h2>Alerts</h2>
+          <p class="lede">Email uses your login. Add a phone if you want SMS.</p>
+          <label>Phone <input id="me-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="5551234567" /></label>
+          <label class="check"><input id="me-email-on" type="checkbox" checked /> Email alerts</label>
+          <label class="check"><input id="me-sms-on" type="checkbox" /> SMS alerts</label>
+          <button type="button" id="me-save" class="primary compact">Save contact</button>
+          <p id="me-error" class="err"></p>
+          <p id="me-ok" class="meta"></p>
+        </section>
         <section class="panel">
           <div class="list-head"><h2>Your watches</h2><button type="button" id="refresh" class="ghost">Refresh</button></div>
           <p id="list-error" class="err"></p>
@@ -124,6 +134,28 @@
         }).catch(function (e) { setText("list-error", e.message); });
       }
       window.loadWatches = loadWatches;
+      function fillMe(user) {
+        if (!user) return;
+        if (byId("me-phone")) byId("me-phone").value = user.phone || "";
+        if (byId("me-email-on")) byId("me-email-on").checked = user.notifyEmail !== false;
+        if (byId("me-sms-on")) byId("me-sms-on").checked = !!user.notifySms;
+      }
+      function loadMe(user) {
+        fillMe(user);
+        api("/api/me").then(function (data) { fillMe(data.user || data); }).catch(function () {});
+      }
+      function saveMe() {
+        setText("me-error", ""); setText("me-ok", "");
+        var body = {
+          phone: ((byId("me-phone") || {}).value || "").trim(),
+          notifyEmail: !!(byId("me-email-on") && byId("me-email-on").checked),
+          notifySms: !!(byId("me-sms-on") && byId("me-sms-on").checked)
+        };
+        api("/api/me", { method: "PATCH", body: JSON.stringify(body) }).then(function (data) {
+          fillMe(data.user || data);
+          setText("me-ok", "Saved");
+        }).catch(function (e) { setText("me-error", e.message); });
+      }
       function showDesk(user) {
         byId("auth").classList.add("hidden"); byId("desk").classList.remove("hidden"); byId("who").classList.remove("hidden");
         byId("who").innerHTML = (user && user.email ? user.email : "signed in") + ' <button type="button" class="ghost" id="logout">Log out</button>';
@@ -133,7 +165,7 @@
           localStorage.removeItem(TOKEN_KEY);
           byId("auth").classList.remove("hidden"); byId("desk").classList.add("hidden"); byId("who").classList.add("hidden"); byId("who").innerHTML = "";
         };
-        loadOptions(); loadWatches();
+        loadOptions(); loadWatches(); loadMe(user);
       }
       window.afterLogin = function (user) { showDesk(user); };
       function doLogin() {
@@ -155,6 +187,7 @@
       if (tabLogin) tabLogin.onclick = function () { registerMode = false; tabLogin.classList.add("on"); if (tabRegister) tabRegister.classList.remove("on"); if (submit) submit.textContent = "Log in"; };
       if (tabRegister) tabRegister.onclick = function () { registerMode = true; tabRegister.classList.add("on"); if (tabLogin) tabLogin.classList.remove("on"); if (submit) submit.textContent = "Register"; };
       if (submit) submit.onclick = function (e) { if (e) e.preventDefault(); doLogin(); };
+      if (byId("me-save")) byId("me-save").onclick = function (e) { if (e) e.preventDefault(); saveMe(); };
       var radius = byId("s-radius"), radiusVal = byId("s-radius-val");
       function syncMiles() { if (radius && radiusVal) radiusVal.textContent = radius.value; }
       if (radius) { radius.oninput = syncMiles; radius.onchange = syncMiles; radius.addEventListener("input", syncMiles); syncMiles(); }
@@ -174,7 +207,7 @@
       };
       if (byId("geo")) byId("geo").onclick = function (e) {
         if (e) e.preventDefault();
-        if (!window.isSecureContext) { setText("search-error", "Location needs http://127.0.0.1:8080/ (not a file:// page)"); return; }
+        if (!window.isSecureContext) { setText("search-error", "Location needs https://ttwatcher.com or http://127.0.0.1:8080/"); return; }
         if (!navigator.geolocation) { setText("search-error", "This browser has no location API"); return; }
         setText("search-error", "Reading location… allow it if the browser asks");
         navigator.geolocation.getCurrentPosition(function (pos) {
@@ -185,8 +218,7 @@
             .then(function (d) { var hit = d.results && d.results[0]; if (hit && hit.formatted) pin(pos.coords.latitude, pos.coords.longitude, hit.formatted); })
             .catch(function () {});
         }, function (e3) {
-          var msg = (e3 && e3.message) ? e3.message : "Location permission denied";
-          setText("search-error", msg);
+          setText("search-error", (e3 && e3.message) ? e3.message : "Location permission denied");
         }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
       };
       function postWatch(body, errId) {

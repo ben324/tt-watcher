@@ -23,12 +23,12 @@ final class Store {
     private final List<Session> sessions = new ArrayList<>();
     private final List<Watch> watches = new ArrayList<>();
     Store(Path file) { this.file = file; load(); }
-    synchronized User createUser(String email, String displayName, char[] password) {
+    synchronized User createUser(String email, char[] password) {
         String normalized = normalizeEmail(email);
         if (findUserByEmail(normalized).isPresent()) throw new IllegalStateException("email_taken");
         byte[] salt = Passwords.salt();
         byte[] hash = Passwords.hash(password, salt);
-        User user = new User(UUID.randomUUID().toString(), normalized,
+        User user = new User(UUID.randomUUID().toString(), normalized, "", true, false,
                 Passwords.hex(salt), Passwords.hex(hash), Instant.now().toString());
         users.add(user); persist(); return user;
     }
@@ -60,7 +60,14 @@ final class Store {
         if (removed) persist();
         return removed;
     }
+    synchronized Optional<User> replaceUser(User updated) {
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).id.equals(updated.id)) { users.set(i, updated); persist(); return Optional.of(updated); }
+        }
+        return Optional.empty();
+    }
     synchronized Watch addWatch(Watch watch) { watches.add(watch); persist(); return watch; }
+    synchronized List<Watch> allWatches() { return new ArrayList<>(watches); }
     synchronized List<Watch> watchesFor(String userId) {
         List<Watch> out = new ArrayList<>();
         for (Watch w : watches) if (w.userId.equals(userId)) out.add(w);
@@ -94,26 +101,28 @@ final class Store {
         return Optional.empty();
     }
     static String normalizeEmail(String email) { return email.trim().toLowerCase(Locale.ROOT); }
-    private static String displayNameFrom(String email) {
-        int at = email.indexOf('@');
-        return at > 0 ? email.substring(0, at) : email;
-    }
     private void load() {
         if (!Files.exists(file)) return;
         String json;
         try { json = Files.readString(file, StandardCharsets.UTF_8); }
         catch (IOException e) { throw new IllegalStateException("Could not read " + file, e); }
         for (String obj : JsonBits.objectsInArray(json, "users")) {
-            User u = User.fromJson(obj);
-            if (!u.id.isBlank() && !u.email.isBlank()) users.add(u);
+            try {
+                User u = User.fromJson(obj);
+                if (!u.id.isBlank() && !u.email.isBlank()) users.add(u);
+            } catch (Exception e) { System.err.println("store skipped a user: " + e.getMessage()); }
         }
         for (String obj : JsonBits.objectsInArray(json, "sessions")) {
-            Session s = Session.fromJson(obj);
-            if (!s.token.isBlank() && !s.userId.isBlank()) sessions.add(s);
+            try {
+                Session s = Session.fromJson(obj);
+                if (!s.token.isBlank() && !s.userId.isBlank()) sessions.add(s);
+            } catch (Exception e) { System.err.println("store skipped a session: " + e.getMessage()); }
         }
         for (String obj : JsonBits.objectsInArray(json, "watches")) {
-            Watch w = Watch.fromJson(obj);
-            if (!w.id.isBlank() && !w.userId.isBlank()) watches.add(w);
+            try {
+                Watch w = Watch.fromJson(obj);
+                if (!w.id.isBlank() && !w.userId.isBlank()) watches.add(w);
+            } catch (Exception e) { System.err.println("store skipped a watch: " + e.getMessage()); }
         }
     }
     private void persist() {

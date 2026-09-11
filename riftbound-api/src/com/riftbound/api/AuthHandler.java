@@ -21,11 +21,12 @@ final class AuthHandler implements HttpHandler {
             if ("/api/auth/login".equals(path) && "POST".equals(method)) { login(ex); return; }
             if ("/api/auth/logout".equals(path) && "POST".equals(method)) { logout(ex); return; }
             if (("/api/auth/me".equals(path) || "/api/me".equals(path)) && "GET".equals(method)) { me(ex); return; }
+            if (("/api/auth/me".equals(path) || "/api/me".equals(path)) && "PATCH".equals(method)) { patchMe(ex); return; }
             if (path.startsWith("/api/auth") && "POST".equals(method)) {
                 Http.json(ex, 404, Json.obj("error", Json.str("not_found"), "message", Json.str("Use POST /api/auth/register, /api/auth/login, /api/auth/logout")));
                 return;
             }
-            Http.methodNotAllowed(ex, "GET, POST, OPTIONS");
+            Http.methodNotAllowed(ex, "GET, POST, PATCH, OPTIONS");
         } catch (IllegalArgumentException e) {
             Http.json(ex, 400, Json.obj("error", Json.str("bad_request"), "message", Json.str(e.getMessage())));
         } catch (Exception e) {
@@ -37,11 +38,10 @@ final class AuthHandler implements HttpHandler {
         String body = Http.readBody(ex);
         String email = Body.str(body, "email");
         String password = Body.str(body, "password");
-        String displayName = Body.str(body, "displayName");
         validateCredentials(email, password);
         char[] chars = password.toCharArray();
         try {
-            User user = app.store.createUser(email, displayName, chars);
+            User user = app.store.createUser(email, chars);
             Session session = app.store.createSession(user.id);
             Http.setSessionCookie(ex, session.token);
             Http.json(ex, 201, sessionPayload(user, session));
@@ -79,6 +79,22 @@ final class AuthHandler implements HttpHandler {
         Optional<User> user = app.requireUser(ex);
         if (user.isEmpty()) return;
         Http.json(ex, 200, Json.obj("user", user.get().publicJson()));
+    }
+    private void patchMe(HttpExchange ex) throws IOException {
+        Optional<User> found = app.requireUser(ex);
+        if (found.isEmpty()) return;
+        User current = found.get();
+        String body = Http.readBody(ex);
+        String phone = current.phone;
+        boolean notifyEmail = current.notifyEmail;
+        boolean notifySms = current.notifySms;
+        if (Body.has(body, "phone")) phone = User.normalizePhone(Body.strOrEmpty(body, "phone"));
+        if (Body.has(body, "notifyEmail")) notifyEmail = Body.bool(body, "notifyEmail");
+        if (Body.has(body, "notifySms")) notifySms = Body.bool(body, "notifySms");
+        if (notifySms && (phone == null || phone.isBlank())) throw new IllegalArgumentException("phone is required when notifySms is true");
+        User updated = current.withContact(phone, notifyEmail, notifySms);
+        app.store.replaceUser(updated);
+        Http.json(ex, 200, Json.obj("user", updated.publicJson()));
     }
     private static void validateCredentials(String email, String password) {
         if (email == null || !EMAIL.matcher(email.trim()).matches()) throw new IllegalArgumentException("email looks invalid");

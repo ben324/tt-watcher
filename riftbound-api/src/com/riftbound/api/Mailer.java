@@ -34,7 +34,8 @@ final class Mailer {
         return new Mailer(host, port, env("SMTP_USER", ""), env("SMTP_PASS", ""), from, tls);
     }
     void send(String to, String subject, String text) throws IOException {
-        Socket raw = port == 465 ? SSLSocketFactory.getDefault().createSocket(host, port) : new Socket(host, port);
+        SSLSocketFactory ssl = (SSLSocketFactory) SSLSocketFactory.getDefault();
+        Socket raw = port == 465 ? ssl.createSocket(host, port) : new Socket(host, port);
         raw.setSoTimeout(20000);
         try {
             Session s = new Session(raw);
@@ -42,7 +43,7 @@ final class Mailer {
             s.cmd("EHLO ttwatcher.com", 250);
             if (startTls && port != 465) {
                 s.cmd("STARTTLS", 220);
-                SSLSocket tls = (SSLSocket) SSLSocketFactory.getDefault().createSocket(raw, host, port, true);
+                SSLSocket tls = (SSLSocket) ssl.createSocket(raw, host, port, true);
                 tls.startHandshake();
                 s = new Session(tls);
                 s.cmd("EHLO ttwatcher.com", 250);

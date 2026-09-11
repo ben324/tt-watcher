@@ -9,9 +9,7 @@ final class Dates {
     private Dates() {}
     static String normalize(String raw) {
         if (raw == null || raw.isBlank()) return "";
-        raw = raw.trim();
-        parseStart(raw);
-        return raw;
+        return parseStart(raw.trim()).toString();
     }
     static Instant parseStart(String raw) {
         if (raw == null || raw.isBlank()) return Instant.EPOCH;

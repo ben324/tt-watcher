@@ -40,7 +40,9 @@ final class InternalEventsClient {
                 .append("&radiusMiles=").append(radiusMiles)
                 .append("&pageSize=").append(pageSize)
                 .append("&maxPages=").append(maxPages);
-        if (startDateAfter != null && !startDateAfter.isBlank()) url.append("&startDateAfter=").append(enc(startDateAfter));
+        if (startDateAfter != null && !startDateAfter.isBlank()) {
+            url.append("&startDateAfter=").append(enc(Dates.parseStart(startDateAfter).toString()));
+        }
         return send(url.toString(), 8);
     }
     Lookup getEvent(String source, String eventId) throws IOException {

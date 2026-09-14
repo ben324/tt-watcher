@@ -9,13 +9,13 @@
 <body>
   <div id="app">
     <header class="top">
-      <div class="brand"><span class="mark">TT</span><div><strong>tt-watcher</strong><p>Riftbound seat and listing alerts</p></div></div>
+      <div class="brand"><span class="mark">TT</span><div><strong>tt-watcher</strong><p>Email when something new appears or a full event opens</p></div></div>
       <div id="who" class="who hidden"></div>
     </header>
     <main>
       <section id="auth" class="panel">
         <h1>Sign in</h1>
-        <p class="lede">Watch a search for new events, or pin an event id until seats open.</p>
+        <p class="lede">Watch a search for new listings and newly opened seats, or watch one event until it has a spot.</p>
         <div class="tabs">
           <button type="button" id="tab-login" class="tab on">Log in</button>
           <button type="button" id="tab-register" class="tab">Register</button>
@@ -31,8 +31,8 @@
       <section id="desk" class="hidden">
         <div class="grid">
           <form id="search-form" class="panel" action="#" method="post" onsubmit="return false;">
-            <h2>New listings</h2>
-            <p class="lede">Type an address or use your location, then Watch this search.</p>
+            <h2>Watch a search</h2>
+            <p class="lede">Email when a new event of this type shows up nearby, or when a full event matching this search gets an opening.</p>
             <label>Address <input id="s-address" type="text" placeholder="350 5th Ave, New York, NY" autocomplete="street-address" /></label>
             <div class="row">
               <button type="button" id="geocode" class="ghost">Find address</button>
@@ -50,8 +50,8 @@
             <p id="search-error" class="err"></p>
           </form>
           <form id="event-form" class="panel" action="#" method="post" onsubmit="return false;">
-            <h2>One event</h2>
-            <p class="lede">Paste an official event id. We check it is upcoming before saving.</p>
+            <h2>Watch one event</h2>
+            <p class="lede">Paste an event id. We email you if that event has an opening, then remove this watch.</p>
             <label>Event id <input id="e-id" type="text" inputmode="numeric" placeholder="774093" /></label>
             <button type="button" id="event-save" class="primary compact">Watch this event</button>
             <p id="event-error" class="err"></p>
@@ -124,9 +124,12 @@
           var watches = data.watches || [];
           if (!watches.length) { box.innerHTML = "<li class='meta'>No watches yet.</li>"; return; }
           box.innerHTML = watches.map(function (w) {
-            var detail = w.kind === "EVENT" ? ("event " + (w.eventId || "")) : ((w.radiusMiles || "") + "mi · " + (w.eventType || "ALL"));
+            var badge = w.kind === "EVENT" ? "One event" : "Search";
+            var detail = w.kind === "EVENT"
+              ? ("Check event " + (w.eventId || "") + " for openings")
+              : ("New events or new openings · " + (w.radiusMiles || "") + "mi · " + (w.eventType || "ALL"));
             var dates = [w.startDateAfter, w.startDateBefore].filter(Boolean).join(" → ");
-            return "<li><div><span class='badge'>" + escapeHtml(w.kind) + "</span><strong>" + escapeHtml(w.name || w.kind) + "</strong><p class='meta'>" + escapeHtml(detail) + (dates ? " · " + escapeHtml(dates) : "") + "</p></div><button type='button' class='ghost danger' data-del='" + escapeHtml(w.id) + "'>Remove</button></li>";
+            return "<li><div><span class='badge'>" + escapeHtml(badge) + "</span><strong>" + escapeHtml(w.name || w.kind) + "</strong><p class='meta'>" + escapeHtml(detail) + (dates ? " · " + escapeHtml(dates) : "") + "</p></div><button type='button' class='ghost danger' data-del='" + escapeHtml(w.id) + "'>Remove</button></li>";
           }).join("");
           box.querySelectorAll("[data-del]").forEach(function (btn) {
             btn.onclick = function () { api("/api/watches/" + btn.getAttribute("data-del"), { method: "DELETE" }).then(loadWatches).catch(function (e) { setText("list-error", e.message); }); };

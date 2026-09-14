@@ -52,11 +52,18 @@ services:
       context: .
       target: job
     mem_limit: 256m
+    env_file:
+      - .env
     environment:
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx160m -XX:+UseSerialGC"
       INTERNAL_BASE_URL: http://internal:8081
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
       RIFTBOUND_STORE: /app/data/store.json
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
     volumes:
       - ./data:/app/data
     depends_on:

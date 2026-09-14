@@ -50,6 +50,13 @@ final class WatchesHandler implements HttpHandler {
         Watch watch = parseWatch(user.id, UUID.randomUUID().toString(), Instant.now().toString(), Http.readBody(ex), null);
         if (!approve(ex, watch)) return;
         app.store.addWatch(watch);
+        if (Watch.KIND_SEARCH.equals(watch.kind)) {
+            try {
+                Watch seeded = new SearchJob(app.store, InternalEventsClient.fromEnv()).seed(watch);
+                app.store.replaceWatch(user.id, seeded.id, seeded);
+                watch = seeded;
+            } catch (Exception e) { System.err.println("seed watch " + watch.id + " failed: " + e.getMessage()); }
+        }
         Http.json(ex, 201, Json.obj("watch", watch.publicJson()));
     }
     private void update(HttpExchange ex, User user, String id) throws IOException {
@@ -114,7 +121,8 @@ final class WatchesHandler implements HttpHandler {
         Integer minSeats = Body.has(body, "minSeatsLeft") ? Body.integer(body, "minSeatsLeft") : (base == null ? null : base.minSeatsLeft);
         if (minSeats != null && minSeats < 0) throw new IllegalArgumentException("minSeatsLeft must be >= 0");
         if (maxCost != null && maxCost < 0) throw new IllegalArgumentException("maxCostCents must be >= 0");
-        return new Watch(id, userId, kind, name, eventId, lat, lng, miles, source, eventType, category, city, maxCost, minSeats, startAfter, startBefore, createdAt);
+        return new Watch(id, userId, kind, name, eventId, lat, lng, miles, source, eventType, category, city, maxCost, minSeats, startAfter, startBefore,
+                base == null ? "" : base.seenIds, base == null ? "" : base.fullIds, createdAt);
     }
     private static String firstString(String body, String fallback, String... keys) {
         for (String key : keys) if (Body.has(body, key)) { String v = Body.str(body, key); return v == null ? "" : v; }

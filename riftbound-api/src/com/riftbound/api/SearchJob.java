@@ -14,8 +14,7 @@ final class SearchJob {
     private final Store store;
     private final InternalEventsClient events;
     SearchJob(Store store, InternalEventsClient events) {
-        this.store = store;
-        this.events = events;
+        this.store = store; this.events = events;
     }
     List<Hit> run() {
         List<Hit> hits = new ArrayList<>();
@@ -56,6 +55,7 @@ final class SearchJob {
     static boolean matches(Watch watch, Event event) {
         try {
             if (!EventCatalog.matches(event, watch.eventType)) return false;
+            if (isFull(event)) return false;
             Instant start = event.startDatetime.isBlank() ? Instant.EPOCH : Dates.parseStart(event.startDatetime);
             Instant after = watch.startDateAfter.isBlank() ? Instant.EPOCH : Dates.parseStart(watch.startDateAfter);
             Instant before = watch.startDateBefore.isBlank() ? Instant.MAX : Dates.parseEnd(watch.startDateBefore);
@@ -64,6 +64,11 @@ final class SearchJob {
             System.err.println("search job watch=" + watch.id + " event=" + event.id + " filter failed: " + e.getMessage());
             return false;
         }
+    }
+    static boolean isFull(Event event) {
+        String status = event.status == null ? "" : event.status.toLowerCase();
+        if (status.contains("full") || status.contains("sold") || status.contains("closed")) return true;
+        return event.capacity > 0 && event.registered >= event.capacity;
     }
     static Event parseEvent(String obj) {
         return new Event(

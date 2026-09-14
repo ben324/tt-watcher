@@ -10,6 +10,8 @@ Email alerts for Riftbound listings on the official UVS locator.
 
 **Watch one event** — paste an event id. The job emails you when that listing has an opening, then removes the watch.
 
+SMS notifications are in progress (expensive)
+
 ## Repo
 
 | Path | Role |

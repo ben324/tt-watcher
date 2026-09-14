@@ -79,7 +79,6 @@
   <script src="app.js"></script>
   <script>
     (function () {
-      var KEY = "87ad304e5f5a4e04a07fdada78297a92";
       var TOKEN_KEY = "tt-watcher-token";
       var registerMode = false;
       var submit = document.getElementById("auth-submit");
@@ -199,12 +198,9 @@
         var q = ((byId("s-address") || {}).value || "").trim();
         if (!q) { setText("search-error", "Type an address first"); return; }
         setText("search-error", "Looking up…");
-        fetch("https://api.geoapify.com/v1/geocode/search?format=json&limit=1&text=" + encodeURIComponent(q) + "&apiKey=" + encodeURIComponent(KEY))
-          .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error(d.message || "Geoapify HTTP " + r.status); return d; }); })
+        api("/api/geocode?q=" + encodeURIComponent(q))
           .then(function (d) {
-            var hit = d.results && d.results[0];
-            if (!hit) throw new Error("No match for that address");
-            pin(Number(hit.lat), Number(hit.lon), hit.formatted || q);
+            pin(Number(d.latitude), Number(d.longitude), d.label || q);
             setText("search-error", "");
           }).catch(function (e2) { setText("search-error", e2.message || String(e2)); });
       };
@@ -216,9 +212,8 @@
         navigator.geolocation.getCurrentPosition(function (pos) {
           pin(pos.coords.latitude, pos.coords.longitude, "Current location");
           setText("search-error", "");
-          fetch("https://api.geoapify.com/v1/geocode/reverse?format=json&lat=" + pos.coords.latitude + "&lon=" + pos.coords.longitude + "&apiKey=" + encodeURIComponent(KEY))
-            .then(function (r) { return r.json(); })
-            .then(function (d) { var hit = d.results && d.results[0]; if (hit && hit.formatted) pin(pos.coords.latitude, pos.coords.longitude, hit.formatted); })
+          api("/api/geocode/reverse?lat=" + pos.coords.latitude + "&lng=" + pos.coords.longitude)
+            .then(function (d) { if (d && d.label) pin(pos.coords.latitude, pos.coords.longitude, d.label); })
             .catch(function () {});
         }, function (e3) {
           setText("search-error", (e3 && e3.message) ? e3.message : "Location permission denied");

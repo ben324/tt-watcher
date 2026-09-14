@@ -5,6 +5,21 @@ import java.util.List;
 
 public final class JobMain {
     public static void main(String[] args) {
+        if (args.length >= 2 && "--mail-test".equals(args[0])) {
+            try {
+                Mailer mailer = Mailer.fromEnv();
+                if (mailer == null) {
+                    System.err.println("Set SMTP_HOST and MAIL_FROM in .env first");
+                    return;
+                }
+                mailer.send(args[1], "tt-watcher test", "If you got this, SMTP works.\nhttps://ttwatcher.com\n");
+                System.out.println("sent test to " + args[1]);
+            } catch (Exception e) {
+                System.err.println("mail-test failed: " + e.getMessage());
+                e.printStackTrace();
+            }
+            return;
+        }
         try {
             Path storeFile = ApiMain.dataFile();
             Store store = new Store(storeFile);

@@ -1,17 +1,5 @@
-# tt-watcher
+# tt-watcher UI
 
-Simple UI for the Riftbound watch APIs.
+Browser UI for [https://ttwatcher.com](https://ttwatcher.com).
 
-Served by `riftbound-api` at `/` when you start the API from `riftbound-api`.
-
-Need JDK 17+. Two terminals:
-
-```bat
-cd riftbound-internal
-run-internal.bat
-
-cd riftbound-api
-run-api.bat
-```
-
-Open http://127.0.0.1:8080/
+Served by `riftbound-api` at `/`. Users sign in, save a search or an event id, and set email alerts. The job, not this page, sends mail.

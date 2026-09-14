@@ -1,35 +1,24 @@
 # tt-watcher
 
-Riftbound event alerts: watch a search (new listings) or an event id (seats).
+Live site: [https://ttwatcher.com](https://ttwatcher.com)
 
-```
-riftbound-events/     Java library (UVS Hydra + PlayRiftbound stub)
-riftbound-api/        User API + serves tt-watcher at /
-riftbound-internal/   Job-only event lookup (port 8081)
-riftbound-schema/     Document schema
-tt-watcher/           Frontend
-```
+Email alerts for Riftbound listings on the official UVS locator.
 
-## Run with Docker
+## What it does
 
-Install Docker Desktop, then from the repo root:
+**Watch a search** — pick an area, distance, event type, and dates. The job emails you when a *new* matching event appears, or when a matching event that was full gets an opening. Existing open listings are recorded when you save the watch so they are not mailed as new.
 
-```sh
-docker compose up --build
-```
+**Watch one event** — paste an event id. The job emails you when that listing has an opening, then removes the watch.
 
-Open http://127.0.0.1:8080/
+Mail is sent by the background job only. Saving a watch on the site does not send email.
 
-One SEARCH job pass:
+## Repo
 
-```sh
-docker compose --profile job run --rm job
-```
+| Path | Role |
+|---|---|
+| `tt-watcher/` | Public UI |
+| `riftbound-api/` | Signed-in user API and static site |
+| `riftbound-internal/` | Event lookup used by the API and the job (not public) |
+| `riftbound-events/` | Java mapping over UVS Hydra (PlayRiftbound stub) |
 
-Stop with Ctrl+C, then `docker compose down`.
-
-## Run without Docker
-
-Need JDK 17+.
-
-Windows: `run-local.bat` or the two `run-*.bat` scripts.
+Accounts and watches persist in `data/store.json` on the server.

@@ -19,9 +19,10 @@ final class SearchJob {
     List<Hit> run() {
         List<Hit> hits = new ArrayList<>();
         for (Watch watch : store.allWatches()) {
-            if (!Watch.KIND_SEARCH.equals(watch.kind)) continue;
             try {
-                hits.addAll(runOne(watch));
+                if (Watch.KIND_SEARCH.equals(watch.kind)) hits.addAll(runOne(watch));
+                else if (Watch.KIND_EVENT.equals(watch.kind)) hits.addAll(runEvent(watch));
+                else continue;
                 Thread.sleep(PAUSE_MS);
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); break; }
             catch (Exception e) { System.err.println("search job watch=" + watch.id + " failed: " + e.getMessage()); }
@@ -30,6 +31,29 @@ final class SearchJob {
     }
     Watch seed(Watch watch) throws IOException { return scan(watch, true).watch; }
     List<Hit> runOne(Watch watch) throws IOException { return scan(watch, false).hits; }
+    List<Hit> runEvent(Watch watch) throws IOException {
+        if (watch.eventId == null || watch.eventId.isBlank()) return List.of();
+        InternalEventsClient.Lookup lookup = events.getEvent(watch.source, watch.eventId);
+        if (lookup.httpStatus == 404) return List.of();
+        if (lookup.httpStatus < 200 || lookup.httpStatus >= 300) {
+            throw new IOException("internal get HTTP " + lookup.httpStatus + " " + lookup.body);
+        }
+        String obj = eventObject(lookup.body);
+        if (obj.isBlank()) return List.of();
+        Event event = parseEvent(obj);
+        String status = event.status == null ? "" : event.status.toLowerCase();
+        if (status.contains("progress") || status.contains("complete") || status.contains("past")
+                || status.contains("ended") || status.contains("cancel")) return List.of();
+        if (isFull(event)) return List.of();
+        return List.of(new Hit(watch, event));
+    }
+    static String eventObject(String body) {
+        if (body == null || body.isBlank()) return "";
+        String nested = JsonBits.nestedObject(body, "event");
+        if (nested != null && !nested.isBlank()) return nested;
+        String trimmed = body.trim();
+        return trimmed.startsWith("{") ? trimmed : "";
+    }
     static final class Scan {
         final Watch watch; final List<Hit> hits;
         Scan(Watch watch, List<Hit> hits) { this.watch = watch; this.hits = hits; }

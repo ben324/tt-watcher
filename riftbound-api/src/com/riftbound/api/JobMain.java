@@ -25,6 +25,13 @@ public final class JobMain {
             Store store = new Store(storeFile);
             SearchJob job = new SearchJob(store, InternalEventsClient.fromEnv());
             System.out.println("search job store=" + storeFile.toAbsolutePath());
+            List<Watch> loaded = store.allWatches();
+            System.out.println("watches=" + loaded.size());
+            for (Watch w : loaded) {
+                System.out.println("  loaded kind=" + w.kind + " eventId=" + w.eventId + " id=" + w.id);
+            }
+            String smtp = System.getenv("SMTP_HOST");
+            System.out.println("smtpHost=" + (smtp == null || smtp.isBlank() ? "(empty)" : smtp));
             List<SearchJob.Hit> hits = job.run();
             System.out.println("matches=" + hits.size());
             for (SearchJob.Hit hit : hits) System.out.println("  " + hit.line());

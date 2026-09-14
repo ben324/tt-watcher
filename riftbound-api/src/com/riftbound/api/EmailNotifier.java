@@ -41,7 +41,10 @@ final class EmailNotifier {
                 }
             }
             Set<String> ids = new LinkedHashSet<>();
-            for (SearchJob.Hit hit : e.getValue()) ids.add(hit.watch().id);
+            for (SearchJob.Hit hit : e.getValue()) {
+                if (Watch.KIND_SEARCH.equals(hit.watch().kind)) continue;
+                ids.add(hit.watch().id);
+            }
             for (String watchId : ids) {
                 if (store.deleteWatch(u.id, watchId)) {
                     System.out.println("removed watch " + watchId + " after hit");

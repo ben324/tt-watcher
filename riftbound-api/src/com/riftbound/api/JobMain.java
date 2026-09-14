@@ -3,6 +3,7 @@ package com.riftbound.api;
 import java.nio.file.Path;
 import java.util.List;
 
+/** Cron entry. Default run scans watches and emails. Args: --mail-test you@x.com */
 public final class JobMain {
     public static void main(String[] args) {
         if (args.length >= 2 && "--mail-test".equals(args[0])) {

@@ -9,6 +9,7 @@ services:
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx160m -XX:+UseSerialGC"
   api:
     build: { context: ., target: api }
+    image: tt-watcher-api
     ports: ["8080:8080"]
     mem_limit: 256m
     env_file: [.env]
@@ -40,7 +41,8 @@ services:
       - caddy_config:/config
     depends_on: [api]
   job:
-    build: { context: ., target: job }
+    image: tt-watcher-api
+    command: ["java", "-cp", "out", "com.riftbound.api.JobMain"]
     mem_limit: 256m
     env_file: [.env]
     environment:

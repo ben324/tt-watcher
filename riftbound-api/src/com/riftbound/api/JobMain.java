@@ -30,7 +30,8 @@ public final class JobMain {
             for (SearchJob.Hit hit : hits) System.out.println("  " + hit.line());
             Mailer mailer = Mailer.fromEnv();
             if (mailer == null) System.out.println("SMTP_HOST/MAIL_FROM not set; printing emails only");
-            System.out.println("emails=" + new EmailNotifier(store, mailer).send(hits));
+            EmailNotifier.Result result = new EmailNotifier(store, mailer).process(hits);
+            System.out.println("emails=" + result.sent() + " removed=" + result.removed());
         } catch (Exception e) {
             System.err.println("search job aborted: " + e.getMessage());
             e.printStackTrace();

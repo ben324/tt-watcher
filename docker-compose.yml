@@ -1,23 +1,17 @@
 services:
   internal:
-    build:
-      context: .
-      target: internal
-    ports:
-      - "8081:8081"
+    build: { context: ., target: internal }
+    ports: ["8081:8081"]
     mem_limit: 256m
     environment:
       INTERNAL_PORT: "8081"
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx160m -XX:+UseSerialGC"
-
   api:
-    build:
-      context: .
-      target: api
-    ports:
-      - "8080:8080"
+    build: { context: ., target: api }
+    ports: ["8080:8080"]
     mem_limit: 256m
+    env_file: [.env]
     environment:
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx160m -XX:+UseSerialGC"
       PORT: "8080"
@@ -26,16 +20,16 @@ services:
       RIFTBOUND_STORE: /app/data/store.json
       TT_WATCHER_DIR: /app/tt-watcher
       GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-87ad304e5f5a4e04a07fdada78297a92}
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - internal
-
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes: ["./data:/app/data"]
+    depends_on: [internal]
   caddy:
     image: caddy:2
-    ports:
-      - "80:80"
-      - "443:443"
+    ports: ["80:80", "443:443"]
     mem_limit: 64m
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
@@ -44,16 +38,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    depends_on:
-      - api
-
+    depends_on: [api]
   job:
-    build:
-      context: .
-      target: job
+    build: { context: ., target: job }
     mem_limit: 256m
-    env_file:
-      - .env
+    env_file: [.env]
     environment:
       JAVA_TOOL_OPTIONS: "-Xms32m -Xmx160m -XX:+UseSerialGC"
       INTERNAL_BASE_URL: http://internal:8081
@@ -64,13 +53,9 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}
-    volumes:
-      - ./data:/app/data
-    depends_on:
-      - internal
-      - api
+    volumes: ["./data:/app/data"]
+    depends_on: [internal, api]
     profiles: ["job"]
-
 volumes:
   caddy_data:
   caddy_config:

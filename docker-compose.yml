@@ -20,7 +20,7 @@ services:
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal}
       RIFTBOUND_STORE: /app/data/store.json
       TT_WATCHER_DIR: /app/tt-watcher
-      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-87ad304e5f5a4e04a07fdada78297a92}
+      GEOAPIFY_API_KEY: ${GEOAPIFY_API_KEY:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}

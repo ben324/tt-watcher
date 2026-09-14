@@ -22,7 +22,6 @@ final class EmailNotifier {
             var user = store.findUserById(e.getKey());
             if (user.isEmpty()) continue;
             User u = user.get();
-            boolean mailOk = true;
             if (u.notifyEmail && u.email != null && !u.email.isBlank()) {
                 String subject = e.getValue().size() == 1
                         ? "tt-watcher: " + e.getValue().get(0).event().name
@@ -38,13 +37,8 @@ final class EmailNotifier {
                     }
                     sent++;
                 } catch (Exception ex) {
-                    mailOk = false;
                     System.err.println("notify failed " + u.email + ": " + ex.getMessage());
                 }
-            }
-            if (!mailOk) {
-                System.err.println("keeping watches for " + u.email + " after mail failure");
-                continue;
             }
             Set<String> ids = new LinkedHashSet<>();
             for (SearchJob.Hit hit : e.getValue()) ids.add(hit.watch().id);
